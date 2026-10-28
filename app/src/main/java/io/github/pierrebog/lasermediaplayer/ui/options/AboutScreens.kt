@@ -1,7 +1,6 @@
 package io.github.pierrebog.lasermediaplayer.ui.options
 
 import android.content.Intent
-import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
@@ -51,6 +50,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import io.github.pierrebog.lasermediaplayer.BuildConfig
 import io.github.pierrebog.lasermediaplayer.R
 import io.github.pierrebog.lasermediaplayer.ui.home.CircleIconButton
@@ -299,7 +299,7 @@ private fun SourceLink(big: Boolean) {
             .background(if (focused) LaserColors.Text else Color.Transparent)
             .clickable(interactionSource = interaction, indication = null, role = Role.Button) {
                 runCatching {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(Credits.SOURCE))
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Credits.SOURCE.toUri())
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 }
             }

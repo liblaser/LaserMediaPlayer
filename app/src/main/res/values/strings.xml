@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">Laser Media Player</string>
 
     <string name="settings">Settings</string>
@@ -48,13 +48,13 @@
     <string name="version">Version</string>
     <string name="version_short">Short version</string>
     <string name="version_long">Long version</string>
-    <string name="language_unknown">Unknown language</string>
     <string name="track_n">Track %1$d</string>
     <string name="track_numbered">%1$s (track %2$d)</string>
     <string name="channels_mono">mono</string>
     <string name="channels_stereo">stereo</string>
     <string name="channels_multi">multichannel</string>
-    <string name="channels_n">%1$d channels</string>
+    <!-- Never 1: one channel is "mono". -->
+    <string name="channels_n" tools:ignore="PluralsCandidate">%1$d channels</string>
     <string name="audio_ext_impaired">audio description</string>
     <string name="audio_ext_commentary">commentary</string>
     <string name="audio_ext_commentary_alt">alternate commentary</string>
@@ -65,7 +65,6 @@
     <string name="sub_ext_commentary">commentary</string>
 
     <!-- Player -->
-    <string name="player_menu_hint">Disc menu: use the arrows, then OK</string>
     <string name="player_pause">Pause</string>
     <string name="player_play">Play</string>
     <string name="player_error">This disc could not be played.</string>
@@ -113,7 +112,6 @@
     <string name="options_playback">Playback</string>
     <string name="options_covers">Covers and posters</string>
     <string name="options_about">About</string>
-    <string name="options_language_section">Language</string>
     <string name="options_language">Interface language</string>
     <string name="options_language_short">Language</string>
     <string name="options_theme">Theme</string>

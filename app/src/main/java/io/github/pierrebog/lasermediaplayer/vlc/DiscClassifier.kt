@@ -1,14 +1,15 @@
 package io.github.pierrebog.lasermediaplayer.vlc
 
-import android.net.Uri
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
 import android.util.Log
+import androidx.core.net.toUri
 import io.github.pierrebog.lasermediaplayer.LASER_TAG
 import io.github.pierrebog.lasermediaplayer.disc.DiscInfo
 import io.github.pierrebog.lasermediaplayer.disc.LaserMrl
 import io.github.pierrebog.lasermediaplayer.disc.TrackLists
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -46,7 +47,7 @@ class DiscClassifier(private val engine: VlcEngine) {
         /* Touched on the handler thread only, until the browse has ended. */
         val collected = ArrayList<IMedia>()
         try {
-            val medias = withTimeoutOrNull(CLASSIFY_TIMEOUT_MS) {
+            val medias = withTimeoutOrNull(CLASSIFY_TIMEOUT) {
                 suspendCancellableCoroutine<List<IMedia>> { cont ->
                     handler.post {
                         val listener = object : MediaBrowser.EventListener {
@@ -63,7 +64,7 @@ class DiscClassifier(private val engine: VlcEngine) {
                             }
                         }
                         browser = MediaBrowser(engine.libVlc, listener, handler).also {
-                            it.browse(Uri.parse(LaserMrl.classification(fd)), 0)
+                            it.browse(LaserMrl.classification(fd).toUri(), 0)
                         }
                     }
                 }
@@ -150,7 +151,7 @@ class DiscClassifier(private val engine: VlcEngine) {
 
     private companion object {
         /* A Blu-ray reads every playlist and starts libaacs: generous. */
-        const val CLASSIFY_TIMEOUT_MS = 60_000L
+        val CLASSIFY_TIMEOUT = 60.seconds
         /* Set by laser.c: the DVD's, Blu-ray's or Video CD's disc ID, and
          * the main title's length in milliseconds. */
         const val DISC_ID_META = "laser-disc-id"

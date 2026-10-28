@@ -1,6 +1,7 @@
 package io.github.pierrebog.lasermediaplayer.resume
 
 import android.content.Context
+import androidx.core.content.edit
 import io.github.pierrebog.lasermediaplayer.disc.DiscInfo
 import io.github.pierrebog.lasermediaplayer.disc.PlayMode
 
@@ -77,7 +78,7 @@ class ResumeStore(context: Context) {
         val k = pointKey(disc, version)
         val worthKeeping = point.timeMs > MIN_RESUME_MS &&
                 (point.lengthMs <= 0 || point.lengthMs - point.timeMs > END_MARGIN_MS)
-        prefs.edit().apply {
+        prefs.edit {
             if (worthKeeping) {
                 putInt("$k|title", point.title)
                 putLong("$k|time", point.timeMs)
@@ -88,7 +89,7 @@ class ResumeStore(context: Context) {
                 for (field in listOf("title", "time", "length", "mode", "options"))
                     remove("$k|$field")
             }
-        }.apply()
+        }
     }
 
     /** True once tracks were chosen, or played, for [disc]. */
@@ -108,12 +109,12 @@ class ResumeStore(context: Context) {
 
     fun saveTrackChoice(disc: DiscInfo, choice: TrackChoice) {
         val k = disc.key
-        prefs.edit()
-            .putInt("$k|audio", choice.audioId ?: -1)
-            .putInt("$k|sub", choice.subtitleId ?: -1)
-            .putString("$k|channel", choice.channel.name)
-            .putBoolean("$k|suboff", choice.subtitleId == null && choice.subtitlesOff)
-            .apply()
+        prefs.edit {
+            putInt("$k|audio", choice.audioId ?: -1)
+            putInt("$k|sub", choice.subtitleId ?: -1)
+            putString("$k|channel", choice.channel.name)
+            putBoolean("$k|suboff", choice.subtitleId == null && choice.subtitlesOff)
+        }
     }
 
     /** The version chosen for [disc], by its title number; null if none
@@ -122,7 +123,7 @@ class ResumeStore(context: Context) {
         prefs.getInt("${disc.key}|version", -1).takeIf { it >= 1 }
 
     fun saveVersion(disc: DiscInfo, title: Int) {
-        prefs.edit().putInt("${disc.key}|version", title).apply()
+        prefs.edit { putInt("${disc.key}|version", title) }
     }
 
     /** True if the picture was last made to fill the screen, cropped, for
@@ -130,7 +131,7 @@ class ResumeStore(context: Context) {
     fun fillScreen(disc: DiscInfo): Boolean = prefs.getBoolean("${disc.key}|fill", false)
 
     fun saveFillScreen(disc: DiscInfo, fill: Boolean) {
-        prefs.edit().putBoolean("${disc.key}|fill", fill).apply()
+        prefs.edit { putBoolean("${disc.key}|fill", fill) }
     }
 
     private companion object {

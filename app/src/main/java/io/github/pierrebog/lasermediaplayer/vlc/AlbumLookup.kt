@@ -1,10 +1,10 @@
 package io.github.pierrebog.lasermediaplayer.vlc
 
-import android.net.Uri
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
 import android.util.Log
+import androidx.core.net.toUri
 import io.github.pierrebog.lasermediaplayer.LASER_TAG
 import io.github.pierrebog.lasermediaplayer.disc.AlbumInfo
 import io.github.pierrebog.lasermediaplayer.disc.AlbumStore
@@ -16,6 +16,7 @@ import io.github.pierrebog.lasermediaplayer.disc.MusicBrainz
 import io.github.pierrebog.lasermediaplayer.disc.dvdaId
 import io.github.pierrebog.lasermediaplayer.disc.tocId
 import io.github.pierrebog.lasermediaplayer.settings.AppSettings
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -200,7 +201,7 @@ class AlbumLookup(
         var media: Media? = null
         val collected = ArrayList<Entry>()
         try {
-            return withTimeoutOrNull(BROWSE_TIMEOUT_MS) {
+            return withTimeoutOrNull(BROWSE_TIMEOUT) {
                 suspendCancellableCoroutine<List<Entry>> { cont ->
                     handler.post {
                         val listener = object : MediaBrowser.EventListener {
@@ -216,7 +217,7 @@ class AlbumLookup(
                         }
                         /* The tracks and their CD-Text only: the cdda module
                          * would otherwise ask MusicBrainz itself. */
-                        media = Media(engine.libVlc, Uri.parse(mrl)).apply {
+                        media = Media(engine.libVlc, mrl.toUri()).apply {
                             addOption(":no-metadata-network-access")
                         }
                         browser = MediaBrowser(engine.libVlc, listener, handler).also {
@@ -254,7 +255,7 @@ class AlbumLookup(
     }
 
     private companion object {
-        const val BROWSE_TIMEOUT_MS = 15_000L
+        val BROWSE_TIMEOUT = 15.seconds
         /* laser.c's own name for a disc without a label among them. */
         val GENERIC_DVDA = setOf("DVD", "DVD AUDIO", "DVDAUDIO", "AUDIO", "AUDIO TS", "DVDA")
     }

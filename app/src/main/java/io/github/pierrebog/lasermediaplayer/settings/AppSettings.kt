@@ -3,6 +3,7 @@ package io.github.pierrebog.lasermediaplayer.settings
 import android.content.Context
 import android.content.res.Resources
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.edit
 import androidx.core.os.ConfigurationCompat
 import androidx.core.os.LocaleListCompat
 import io.github.pierrebog.lasermediaplayer.disc.DiscKind
@@ -111,7 +112,7 @@ class AppSettings(context: Context) {
     val theme: StateFlow<ThemeMode> = _theme.asStateFlow()
 
     fun setTheme(mode: ThemeMode) {
-        prefs.edit().putString(KEY_THEME, mode.name).apply()
+        prefs.edit { putString(KEY_THEME, mode.name) }
         _theme.value = mode
     }
 
@@ -121,15 +122,15 @@ class AppSettings(context: Context) {
     fun updatePlayback(change: (PlaybackDefaults) -> PlaybackDefaults) {
         _playback.update(change)
         val p = _playback.value
-        prefs.edit()
-            .putString(KEY_AUDIO, p.audio)
-            .putString(KEY_SUBTITLES, p.subtitles)
-            .putBoolean(KEY_NO_SUBS, p.noSubtitlesInInterfaceLanguage)
-            .putBoolean(KEY_HW_VCD, p.hwVcd)
-            .putBoolean(KEY_HW_DVD, p.hwDvd)
-            .putBoolean(KEY_HW_BLURAY, p.hwBluray)
-            .putBoolean(KEY_MENU_ARROWS, p.menuArrows)
-            .apply()
+        prefs.edit {
+            putString(KEY_AUDIO, p.audio)
+            putString(KEY_SUBTITLES, p.subtitles)
+            putBoolean(KEY_NO_SUBS, p.noSubtitlesInInterfaceLanguage)
+            putBoolean(KEY_HW_VCD, p.hwVcd)
+            putBoolean(KEY_HW_DVD, p.hwDvd)
+            putBoolean(KEY_HW_BLURAY, p.hwBluray)
+            putBoolean(KEY_MENU_ARROWS, p.menuArrows)
+        }
     }
 
     private fun loadPlayback(): PlaybackDefaults {
@@ -157,12 +158,12 @@ class AppSettings(context: Context) {
     val lookups: StateFlow<LookupSettings> = _lookups.asStateFlow()
 
     fun setAlbumLookup(on: Boolean) {
-        prefs.edit().putBoolean(KEY_ALBUMS, on).apply()
+        prefs.edit { putBoolean(KEY_ALBUMS, on) }
         _lookups.update { it.copy(albums = on) }
     }
 
     fun setFilmLookup(on: Boolean) {
-        prefs.edit().putBoolean(KEY_FILMS, on).apply()
+        prefs.edit { putBoolean(KEY_FILMS, on) }
         _lookups.update { it.copy(films = on) }
     }
 
@@ -170,7 +171,7 @@ class AppSettings(context: Context) {
     fun setTmdbKey(key: String) {
         val trimmed = key.trim()
         val status = if (trimmed.isEmpty()) KeyStatus.NONE else KeyStatus.CHECKING
-        prefs.edit().putString(KEY_TMDB, trimmed).putString(KEY_TMDB_STATUS, status.name).apply()
+        prefs.edit { putString(KEY_TMDB, trimmed); putString(KEY_TMDB_STATUS, status.name) }
         _lookups.update { it.copy(tmdbKey = trimmed, keyStatus = status) }
         if (trimmed.isEmpty()) return
         scope.launch {
@@ -181,7 +182,7 @@ class AppSettings(context: Context) {
             }
             /* Unless the key changed meanwhile. */
             if (_lookups.value.tmdbKey != trimmed) return@launch
-            prefs.edit().putString(KEY_TMDB_STATUS, checked.name).apply()
+            prefs.edit { putString(KEY_TMDB_STATUS, checked.name) }
             _lookups.update { it.copy(keyStatus = checked) }
         }
     }

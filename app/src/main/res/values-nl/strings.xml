@@ -47,7 +47,6 @@
     <string name="version">Versie</string>
     <string name="version_short">Korte versie</string>
     <string name="version_long">Lange versie</string>
-    <string name="language_unknown">Onbekende taal</string>
     <string name="track_n">Spoor %1$d</string>
     <string name="track_numbered">%1$s (spoor %2$d)</string>
     <string name="channels_mono">mono</string>
@@ -64,7 +63,6 @@
     <string name="sub_ext_commentary">commentaar</string>
 
     <!-- Player -->
-    <string name="player_menu_hint">Discmenu: gebruik de pijltjes, dan OK</string>
     <string name="player_pause">Pauze</string>
     <string name="player_play">Afspelen</string>
     <string name="player_error">Deze disc kon niet worden afgespeeld.</string>
@@ -112,7 +110,6 @@
     <string name="options_playback">Afspelen</string>
     <string name="options_covers">Hoezen en posters</string>
     <string name="options_about">Over</string>
-    <string name="options_language_section">Taal</string>
     <string name="options_language">Taal van de interface</string>
     <string name="options_language_short">Taal</string>
     <string name="options_theme">Thema</string>

@@ -47,7 +47,6 @@
     <string name="version">Fassung</string>
     <string name="version_short">Kurze Fassung</string>
     <string name="version_long">Lange Fassung</string>
-    <string name="language_unknown">Unbekannte Sprache</string>
     <string name="track_n">Spur %1$d</string>
     <string name="track_numbered">%1$s (Spur %2$d)</string>
     <string name="channels_mono">Mono</string>
@@ -64,7 +63,6 @@
     <string name="sub_ext_commentary">Kommentar</string>
 
     <!-- Player -->
-    <string name="player_menu_hint">Disc-Menü: Pfeiltasten, dann OK</string>
     <string name="player_pause">Pause</string>
     <string name="player_play">Abspielen</string>
     <string name="player_error">Diese Disc konnte nicht abgespielt werden.</string>
@@ -112,7 +110,6 @@
     <string name="options_playback">Wiedergabe</string>
     <string name="options_covers">Cover und Poster</string>
     <string name="options_about">Über</string>
-    <string name="options_language_section">Sprache</string>
     <string name="options_language">Sprache der Oberfläche</string>
     <string name="options_language_short">Sprache</string>
     <string name="options_theme">Design</string>

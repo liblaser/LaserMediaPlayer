@@ -23,12 +23,12 @@ base {
 
 android {
     namespace = "io.github.pierrebog.lasermediaplayer"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "io.github.pierrebog.lasermediaplayer"
         minSdk = 21
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = appVersion
         /* The ABIs with a Java runtime for the Blu-ray menus, in
