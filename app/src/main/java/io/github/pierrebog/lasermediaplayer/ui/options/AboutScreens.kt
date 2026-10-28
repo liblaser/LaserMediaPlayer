@@ -40,6 +40,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -253,9 +254,9 @@ private data class Paragraph(val text: String, val heading: Boolean)
 
 @Composable
 private fun LicenceText(big: Boolean, first: FocusRequester) {
-    val context = LocalContext.current
-    val paragraphs = remember {
-        val text = context.resources.openRawResource(R.raw.gpl_2_0).bufferedReader().use { it.readText() }
+    val resources = LocalResources.current
+    val paragraphs = remember(resources) {
+        val text = resources.openRawResource(R.raw.gpl_2_0).bufferedReader().use { it.readText() }
         text.split(Regex("""\n\s*\n""")).filter { it.isNotBlank() }.map { block ->
             val lines = block.lines().filter { it.isNotBlank() }
             Paragraph(lines.joinToString(if (lines.first().startsWith("        ")) "\n" else " ") {

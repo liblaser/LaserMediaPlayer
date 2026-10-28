@@ -1,5 +1,6 @@
 package io.github.pierrebog.lasermediaplayer.ui.player
 
+import android.annotation.SuppressLint
 import android.provider.Settings
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.CubicBezierEasing
@@ -356,6 +357,9 @@ fun CoverPlaceholder(size: Dp, modifier: Modifier = Modifier) {
 }
 
 /** A line of text that never wraps. */
+/* The colour, the argument most callers give, comes before the modifier, so
+ * that it stays positional. */
+@SuppressLint("ModifierParameter")
 @Composable
 fun OneLine(text: String, size: TextUnit, color: Color = LaserColors.Text,
             bold: Boolean = false, modifier: Modifier = Modifier, tabular: Boolean = false) {

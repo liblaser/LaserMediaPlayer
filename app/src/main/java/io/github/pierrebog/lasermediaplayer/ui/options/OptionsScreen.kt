@@ -245,13 +245,16 @@ fun OptionsScreen(settings: AppSettings, onBack: () -> Unit) {
                     onDismiss = { picker = null },
                 )
             }
-            Picker.TMDB_KEY -> KeySheet(
-                current = settings.lookups.value.tmdbKey,
-                form = form,
-                onSave = { picker = null; settings.setTmdbKey(it) },
-                onDelete = { picker = null; settings.setTmdbKey("") },
-                onDismiss = { picker = null },
-            )
+            Picker.TMDB_KEY -> {
+                val lookups by settings.lookups.collectAsStateWithLifecycle()
+                KeySheet(
+                    current = lookups.tmdbKey,
+                    form = form,
+                    onSave = { picker = null; settings.setTmdbKey(it) },
+                    onDelete = { picker = null; settings.setTmdbKey("") },
+                    onDismiss = { picker = null },
+                )
+            }
             null -> {}
         }
     }

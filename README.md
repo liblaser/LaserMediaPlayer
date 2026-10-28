@@ -1,8 +1,63 @@
 # Laser Media Player
 
 Plays audio CDs, Video CDs, DVD-Video, DVD-Audio and Blu-ray discs from a USB
-optical drive, on Android phones, boxes and Android TV, through libVLC 4 and
-liblaser.
+optical drive, on Android (6.0 or later) phones, boxes and Android TV, through
+libVLC 4 and liblaser.
+
+## User's manual
+
+### Playing a disc
+
+**Plug the drive in.** Connect a USB CD, DVD or Blu-ray drive - on a phone,
+through an OTG adapter - and grant the USB permission Android asks for. The
+disc in it is identified, which takes a few seconds, more for a Blu-ray, and
+the disc screen shows its title and controls to play it.
+
+**Blu-rays.** A commercial Blu-ray is protected by AACS and needs:
+
+- the libaacs provider app (`org.libaacs.provider`), installed separately
+  (see *Building*);
+- libaacs's key file, `KEYDB.cfg`, which the app asks for the first time a
+  protected disc plays: choose the file, or a zip archive holding it. A newer
+  one is loaded from *Options › Playback*.
+
+Neither is provided by this project. Please check your local laws before
+installing libaacs.
+
+### Options
+
+- *Interface:* the app's language and theme.
+- *Playback:* the default audio and subtitle languages, hardware decoding
+  for each kind of disc, the arrows in disc menus, and the AACS key file
+  if libaacs is detected.
+- *Covers and posters:* the online lookups. Film posters need a free TMDB
+  API key, from an account on themoviedb.org.
+- *About:* the version, the licence, and the libraries the app is made of.
+
+### Troubleshooting
+
+**If nothing happens when you plug the drive in** - no permission dialog, no
+disc - the usual cause is power. An optical drive draws more than most phones
+and TV boxes supply over USB: use a powered USB hub, a Y-cable with its own
+supply, or the drive's own power input if it has one.
+
+**If a disc stutters,** suspect the power again first: an underpowered drive
+silently retries its reads.
+
+**If a disc does not play properly** - no picture, a frozen, garbled or
+stuttering picture, playback stopping with an error - try turning off
+hardware decoding for that kind of disc, in *Options › Playback*. Some
+devices' decoders handle the video of a Video CD, a DVD or a Blu-ray badly;
+the app then decodes it itself, at the cost of more battery and CPU.
+
+**"Disc not identified"** means the drive did not answer in time. Take the
+disc out and put it back, or unplug the drive and plug it in again.
+
+**"This Blu-ray could not be decrypted"** means the key file has no key for
+that disc: load a newer `KEYDB.cfg` in *Options › Playback*.
+
+**To report a problem,** include the log: the tags are `Laser` for the
+drive, `LaserPlayer` for the app and `VLC` for libVLC.
 
 ## Building
 
@@ -16,17 +71,8 @@ liblaser.
    discs play without their menus.
 3. Open the project in Android Studio, or run `./gradlew assembleDebug`.
 
-The libaacs provider APK (`org.libaacs.provider`) is found at run time, if
-present. It can be built from this branch: https://code.videolan.org/Pierrebog/libaacs/-/tree/libaacs-android-apk
-
-libaacs's key file, KEYDB.cfg, is chosen by the user with the
-system's file picker - the file or a zip archive holding it - the first time
-a protected Blu-ray plays, and copied into the app's private files; a newer
-one is loaded from Options › Playback. No storage permission is asked for.
-
-Discs are named online: audio CDs and DVD-Audio on MusicBrainz, with their
-covers from the Cover Art Archive, and films on TMDB, with a key the user
-enters in the options.
+The libaacs provider APK (`org.libaacs.provider`) can be built from this
+branch: https://code.videolan.org/Pierrebog/libaacs/-/tree/libaacs-android-apk
 
 ## Layout
 

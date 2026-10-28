@@ -27,7 +27,7 @@ android {
 
     defaultConfig {
         applicationId = "io.github.pierrebog.lasermediaplayer"
-        minSdk = 21
+        minSdk = 23
         targetSdk = 37
         versionCode = 1
         versionName = appVersion
