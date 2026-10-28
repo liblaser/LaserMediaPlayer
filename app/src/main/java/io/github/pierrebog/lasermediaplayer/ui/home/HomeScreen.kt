@@ -1,5 +1,6 @@
 package io.github.pierrebog.lasermediaplayer.ui.home
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -245,6 +246,9 @@ private fun Header(selected: Drive?, form: FormFactor, onRefresh: () -> Unit, on
 }
 
 /** One line, its size reduced until it fits the width, rather than cut. */
+/* The scope's maxWidth is used, as a key: Android Studio's analysis misses
+ * it, Gradle's lint does not. */
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 private fun FitText(text: String, style: TextStyle, maxSize: TextUnit, modifier: Modifier = Modifier) {
     BoxWithConstraints(modifier) {
@@ -304,6 +308,9 @@ private fun DriveChips(drives: List<Drive>, selected: Drive?, onSelect: (Drive) 
 }
 
 /** The disc screen: case, title, progress, tracks, play buttons. */
+/* Both BoxWithConstraints use their scope's maxHeight and maxWidth: Android
+ * Studio's analysis misses it, Gradle's lint does not. */
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 private fun DiscPanel(
     disc: DiscInfo,

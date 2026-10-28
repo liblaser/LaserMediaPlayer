@@ -1,6 +1,5 @@
 package io.github.pierrebog.lasermediaplayer.ui.player
 
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.view.MotionEvent
@@ -9,6 +8,7 @@ import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
 import android.util.Log
+import androidx.core.net.toUri
 import io.github.pierrebog.lasermediaplayer.LASER_TAG
 import io.github.pierrebog.lasermediaplayer.LaserApp
 import io.github.pierrebog.lasermediaplayer.disc.DiscKind
@@ -183,7 +183,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         app.drives.startPlayback(deviceName)
         if (hasDiscMenu && kind == DiscKind.BLURAY) main.postDelayed(menuWatch, MENU_WATCH_MS)
 
-        val media = Media(app.engine.libVlc, Uri.parse(mrl))
+        val media = Media(app.engine.libVlc, mrl.toUri())
         request.options.forEach { media.addOption(it) }
         /* The disc menus, and the audio by default, in LMP's language - the
          * one chosen in its options, which may not be the system's that
@@ -712,8 +712,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         val bdMenus = menusPlay && kind == DiscKind.BLURAY
         val title = when (kind) {
             DiscKind.BLURAY -> if (bdMenus) -1 else player.title
-            DiscKind.DVD_VIDEO, DiscKind.DVD_AUDIO -> player.title
-            DiscKind.CD_AUDIO -> if (subItems != null) _state.value.current else -1
+            DiscKind.DVD_VIDEO -> player.title
             else -> -1
         }
         val options = if (bdMenus) request.options + ":no-bluray-menu" else request.options
