@@ -45,16 +45,13 @@ object Credits {
     const val SOURCE = "https://github.com/liblaser/LaserMediaPlayer"
 
     const val LIBVLC_VERSION = "4.0.0-dev"
-    const val LIBLASER_VERSION = "0.2.1"
+    const val LIBLASER_VERSION = "0.3.0"
     /* Vendored in liblaser. */
     const val LIBUSB_VERSION = "1.0.30"
     /* The Java runtime for the Blu-ray menus (BD-J), in the assets: the
-     * Android port of OpenJDK 8 built by angelauramc-openjdk-build at
-     * OPENJDK_SOURCE - its source, as GPLv2 asks - prepared by the app's
-     * bdj-jre-tools. */
+     * Android port of OpenJDK 8 built by angelauramc-openjdk-build, prepared
+     * by the app's bdj-jre-tools - its source is given in the README. */
     const val OPENJDK_VERSION = "8"
-    const val OPENJDK_SOURCE = "https://github.com/AngelAuraMC/angelauramc-openjdk-build/" +
-        "commit/62359f04413c3ffe339e652b88a96d9087840cbf"
 
     /** The other libraries in libvlc.so, liblaser's vendored libudfread
      * included. */
