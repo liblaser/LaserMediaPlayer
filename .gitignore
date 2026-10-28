@@ -1,0 +1,14 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+app/libs/*.aar
+keystore.properties
+*.jks
+*.keystore
+# The BD-J runtime and jars, too big for git: see app/src/main/assets/bdj/README.md
+app/src/main/assets/bdj/*.zip
+app/src/main/assets/bdj/*.jar
+/VLC/
+/.kotlin/

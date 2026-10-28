@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The debug build's name, told apart from the release in the launcher. -->
+    <string name="app_name" translatable="false">Laser Media Player (debug)</string>
+</resources>

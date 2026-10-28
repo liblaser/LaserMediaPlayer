@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="settings">Configurações</string>
+    <string name="refresh">Atualizar</string>
+    <string name="back">Voltar</string>
+
+    <!-- States without a disc -->
+    <string name="state_identifying">Identificando o disco…</string>
+    <string name="state_identifying_hint">Isso pode levar alguns segundos, mais com um Blu-ray.</string>
+    <string name="state_probing">Identificando um dispositivo USB…</string>
+    <string name="state_no_drive">Nenhuma unidade detectada</string>
+    <string name="state_no_drive_hint">Conecte uma unidade de CD, DVD ou Blu-ray USB. Em um celular, use um adaptador OTG e verifique se a unidade está alimentada.</string>
+    <string name="state_no_disc">Nenhum disco legível</string>
+    <string name="state_no_disc_hint">Insira um CD, um DVD ou um Blu-ray.</string>
+    <string name="state_not_responding">Disco não identificado</string>
+    <string name="state_not_responding_hint">A unidade não respondeu a tempo.</string>
+    <string name="state_permission">O acesso à unidade foi negado</string>
+    <string name="state_permission_hint">Permita o acesso para ler os discos desta unidade.</string>
+    <string name="allow_access">Permitir o acesso</string>
+
+    <!-- Disc kinds -->
+    <string name="kind_cd">CD de áudio</string>
+    <string name="kind_dvd">DVD-Video</string>
+    <string name="kind_dvda">DVD-Audio</string>
+    <string name="kind_bd">Blu-ray</string>
+    <string name="kind_vcd">Video CD</string>
+    <string name="drive_empty">Vazia</string>
+    <string name="drive_identifying">Identificando…</string>
+    <string name="drive_not_responding">Não responde</string>
+
+    <!-- Play buttons -->
+    <string name="play">Reproduzir</string>
+    <string name="resume_at">Retomar em %1$s</string>
+    <string name="play_from_start">Reproduzir do início</string>
+    <string name="play_with_menus">Reproduzir com menus</string>
+    <!-- The heading over the tracks and the buttons playing without the menus. -->
+    <string name="without_menus_heading">Sem os menus do disco</string>
+    <string name="video_part_heading">Parte de vídeo</string>
+    <string name="play_audio_part">Reproduzir a parte de áudio</string>
+    <string name="play_video_part">Reproduzir a parte de vídeo</string>
+
+    <!-- Tracks -->
+    <string name="audio_track">Faixa de áudio</string>
+    <string name="subtitles">Legendas</string>
+    <string name="subtitles_off">Nenhuma</string>
+    <string name="version">Versão</string>
+    <string name="version_short">Versão curta</string>
+    <string name="version_long">Versão longa</string>
+    <string name="language_unknown">Idioma desconhecido</string>
+    <string name="track_n">Faixa %1$d</string>
+    <string name="track_numbered">%1$s (faixa %2$d)</string>
+    <string name="channels_mono">mono</string>
+    <string name="channels_stereo">estéreo</string>
+    <string name="channels_multi">multicanal</string>
+    <string name="channels_n">%1$d canais</string>
+    <string name="audio_ext_impaired">audiodescrição</string>
+    <string name="audio_ext_commentary">comentários</string>
+    <string name="audio_ext_commentary_alt">comentários alternativos</string>
+    <string name="sub_ext_large">grandes</string>
+    <string name="sub_ext_children">para crianças</string>
+    <string name="sub_ext_captions">para surdos</string>
+    <string name="sub_ext_forced">forçadas</string>
+    <string name="sub_ext_commentary">comentários</string>
+
+    <!-- Player -->
+    <string name="player_menu_hint">Menu do disco: use as setas e depois OK</string>
+    <string name="player_pause">Pausar</string>
+    <string name="player_play">Reproduzir</string>
+    <string name="player_error">Não foi possível reproduzir este disco.</string>
+    <string name="player_error_aacs">Não foi possível descriptografar este Blu-ray: provavelmente o arquivo de chaves não tem as chaves dele. Você pode carregar um KEYDB.cfg mais recente nas opções, em Reprodução.</string>
+    <string name="nav_up">Para cima</string>
+    <string name="nav_down">Para baixo</string>
+    <string name="nav_left">Esquerda</string>
+    <string name="nav_right">Direita</string>
+    <string name="nav_ok">OK</string>
+    <string name="channel_stereo">Estéreo</string>
+    <string name="channel_left">Canal esquerdo</string>
+    <string name="channel_right">Canal direito</string>
+    <string name="channel_all_speakers">Em todos os alto-falantes</string>
+    <string name="libaacs_missing_title">libaacs ausente</string>
+    <string name="libaacs_missing_text">Este Blu-ray é protegido e precisa da biblioteca libaacs, que não está instalada. Instale o APK da libaacs e depois reinicie o Laser Media Player.</string>
+    <string name="keys_title">Arquivo de chaves AACS</string>
+    <string name="keys_text">Para reproduzir Blu-rays protegidos, a libaacs precisa do seu arquivo de chaves, KEYDB.cfg. Escolha o arquivo ou um arquivo zip que o contenha.</string>
+    <string name="keys_choose">Escolher</string>
+    <string name="keys_loading">Carregando o arquivo de chaves…</string>
+    <string name="keys_not_keydb">Este arquivo não é um arquivo de chaves AACS (KEYDB.cfg) nem um arquivo zip que contenha um.</string>
+    <string name="keys_unreadable">Não foi possível ler o arquivo.</string>
+    <string name="keys_no_picker">Este dispositivo não tem um seletor de arquivos para escolher o arquivo de chaves.</string>
+    <string name="keys_none">Nenhum</string>
+    <string name="keys_load">Carregar uma nova versão</string>
+    <string name="cancel">Cancelar</string>
+    <string name="previous_track">Faixa anterior</string>
+    <string name="next_track">Próxima faixa</string>
+    <string name="previous_chapter">Capítulo anterior</string>
+    <string name="next_chapter">Próximo capítulo</string>
+    <string name="disc_menu">Menu do disco</string>
+    <string name="fill_screen">Preencher a tela</string>
+    <string name="now_playing">Reproduzindo</string>
+    <string name="tracks_list">Faixas</string>
+    <string name="seek_bar">Posição</string>
+    <string name="chapter_n_of">Capítulo %1$d de %2$d</string>
+    <plurals name="tracks_count">
+        <item quantity="one">%1$d faixa</item>
+        <item quantity="other">%1$d faixas</item>
+    </plurals>
+    <string name="track_n_of">Faixa %1$d de %2$d</string>
+
+    <!-- Options -->
+    <string name="options_title">Opções</string>
+    <string name="options_interface">Interface</string>
+    <string name="options_playback">Reprodução</string>
+    <string name="options_covers">Capas e pôsteres</string>
+    <string name="options_about">Sobre</string>
+    <string name="options_language_section">Idioma</string>
+    <string name="options_language">Idioma da interface</string>
+    <string name="options_language_short">Idioma</string>
+    <string name="options_theme">Tema</string>
+    <string name="theme_dark">Escuro</string>
+    <string name="theme_light">Claro</string>
+    <string name="theme_system">Padrão do sistema</string>
+    <string name="language_system">Padrão do sistema</string>
+    <string name="options_tracks">Faixas padrão</string>
+    <string name="options_playback_tracks">Reprodução — faixas padrão</string>
+    <string name="options_hw">Decodificação por hardware</string>
+    <string name="options_playback_hw">Reprodução — decodificação por hardware</string>
+    <string name="options_other">Outras opções</string>
+    <string name="options_playback_other">Reprodução — outras opções</string>
+    <string name="options_menu_arrows">Mostrar setas nos menus dos discos</string>
+    <string name="options_playback_bluray">Reprodução — Blu-ray</string>
+    <string name="options_hw_hint">Desative se a imagem travar ou apresentar defeitos com este tipo de disco.</string>
+    <string name="options_audio_language">Idioma do áudio</string>
+    <string name="options_no_subs_same">Sem legendas se o áudio estiver no idioma da interface</string>
+    <string name="pref_original_language">Idioma original</string>
+
+    <!-- Options: covers and posters -->
+    <string name="options_covers_section">Capas e pôsteres</string>
+    <string name="options_online">Pesquisa online</string>
+    <string name="lookup_albums">Capas e títulos dos álbuns</string>
+    <string name="lookup_albums_detail">Pesquisados no MusicBrainz</string>
+    <string name="lookup_films">Pôsteres e títulos dos filmes</string>
+    <string name="lookup_films_detail">Pesquisados no TMDB</string>
+    <string name="tmdb_key">Chave de API do TMDB</string>
+    <string name="tmdb_key_hint">A chave é gratuita: crie uma conta em themoviedb.org e obtenha sua chave de API nas configurações da conta.</string>
+    <string name="key_none">Nenhuma chave</string>
+    <string name="key_checking">Verificando…</string>
+    <string name="key_valid">Chave válida</string>
+    <string name="key_refused">Chave recusada</string>
+    <string name="key_unverified">Não foi possível verificar</string>
+    <string name="key_save">Salvar</string>
+    <string name="key_delete">Excluir a chave</string>
+    <string name="key_field">Chave de API</string>
+
+    <!-- Options: about -->
+    <string name="about_version">Versão %1$s · Licença %2$s</string>
+    <string name="about_licence">Licença</string>
+    <string name="about_libraries">Bibliotecas utilizadas</string>
+    <string name="about_other_libraries">Outras bibliotecas</string>
+    <string name="about_metadata">Metadados</string>
+    <string name="about_disclaimer">Este aplicativo usa as APIs do TMDB e do MusicBrainz, mas não é endossado nem certificado pelo TMDB ou pelo MusicBrainz.</string>
+    <string name="about_in_libvlc">Incluídas na libvlc %1$s</string>
+    <string name="about_in_app">Incluídas no aplicativo</string>
+    <string name="lic_or_later">%1$s ou posterior</string>
+    <string name="lic_named">Licença %1$s</string>
+    <string name="lic_bsd">BSD de %1$d cláusulas</string>
+    <string name="lic_either">%1$s ou %2$s</string>
+</resources>

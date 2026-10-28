@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A disc: placeholder icon until a real one is drawn. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#ECEFF2"
+        android:pathData="M54,30a24,24 0,1 1,0 48a24,24 0,1 1,0 -48z M54,49a5,5 0,1 0,0 10a5,5 0,1 0,0 -10z" />
+    <path android:fillColor="#7B93FF"
+        android:pathData="M54,34a20,20 0,0 1,20 20h-4a16,16 0,0 0,-16 -16z" />
+</vector>

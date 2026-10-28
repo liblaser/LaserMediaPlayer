@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android TV launcher banner, 320x180: placeholder until a real one is drawn. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp" android:height="180dp">
+    <item><shape><solid android:color="#101317" /></shape></item>
+    <item android:width="108dp" android:height="108dp" android:gravity="center"
+        android:drawable="@drawable/ic_launcher_foreground" />
+</layer-list>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A silver disc, from icon_argent.svg. Its gradient needs Android 7
+     (API 24): before, the same picture as PNG, in drawable-*dpi. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillType="evenOdd"
+        android:pathData="M54,21a33,33 0,1 1,0 66a33,33 0,1 1,0 -66z M54,47.1a6.9,6.9 0,1 0,0 13.8a6.9,6.9 0,1 0,0 -13.8z">
+        <aapt:attr name="android:fillColor">
+            <!-- The SVG's gradient spans the disc's box (21 to 87). -->
+            <gradient android:type="linear"
+                android:startX="30.9" android:startY="27.6"
+                android:endX="77.1" android:endY="80.4">
+                <item android:offset="0" android:color="#FFF1F3F5" />
+                <item android:offset="0.45" android:color="#FFA7AEB6" />
+                <item android:offset="0.6" android:color="#FFD3D8DD" />
+                <item android:offset="1" android:color="#FF7E868F" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#FF7B93FF"
+        android:pathData="M54,27.6A26.4,26.4 0,0 1,80.4 54L77.3,54A23.3,23.3 0,0 0,54 30.7Z" />
+</vector>

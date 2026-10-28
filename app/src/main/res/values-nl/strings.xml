@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="settings">Instellingen</string>
+    <string name="refresh">Vernieuwen</string>
+    <string name="back">Terug</string>
+
+    <!-- States without a disc -->
+    <string name="state_identifying">Disc wordt herkend…</string>
+    <string name="state_identifying_hint">Dit kan enkele seconden duren, langer bij een Blu-ray.</string>
+    <string name="state_probing">Een USB-apparaat wordt herkend…</string>
+    <string name="state_no_drive">Geen station gevonden</string>
+    <string name="state_no_drive_hint">Sluit een USB-cd-, dvd- of Blu-ray-station aan. Gebruik op een telefoon een OTG-adapter en zorg dat het station stroom krijgt.</string>
+    <string name="state_no_disc">Geen leesbare disc</string>
+    <string name="state_no_disc_hint">Plaats een cd, dvd of Blu-ray.</string>
+    <string name="state_not_responding">Disc niet herkend</string>
+    <string name="state_not_responding_hint">Het station reageerde niet op tijd.</string>
+    <string name="state_permission">Toegang tot het station geweigerd</string>
+    <string name="state_permission_hint">Geef toegang om de discs in dit station te lezen.</string>
+    <string name="allow_access">Toegang geven</string>
+
+    <!-- Disc kinds -->
+    <string name="kind_cd">Audio-cd</string>
+    <string name="kind_dvd">DVD-Video</string>
+    <string name="kind_dvda">DVD-Audio</string>
+    <string name="kind_bd">Blu-ray</string>
+    <string name="kind_vcd">Video-cd</string>
+    <string name="drive_empty">Leeg</string>
+    <string name="drive_identifying">Herkennen…</string>
+    <string name="drive_not_responding">Reageert niet</string>
+
+    <!-- Play buttons -->
+    <string name="play">Afspelen</string>
+    <string name="resume_at">Hervatten bij %1$s</string>
+    <string name="play_from_start">Vanaf het begin afspelen</string>
+    <string name="play_with_menus">Afspelen met menu\'s</string>
+    <!-- The heading over the tracks and the buttons playing without the menus. -->
+    <string name="without_menus_heading">Zonder de menu\'s van de disc</string>
+    <string name="video_part_heading">Videogedeelte</string>
+    <string name="play_audio_part">Audiogedeelte afspelen</string>
+    <string name="play_video_part">Videogedeelte afspelen</string>
+
+    <!-- Tracks -->
+    <string name="audio_track">Audiospoor</string>
+    <string name="subtitles">Ondertitels</string>
+    <string name="subtitles_off">Geen</string>
+    <string name="version">Versie</string>
+    <string name="version_short">Korte versie</string>
+    <string name="version_long">Lange versie</string>
+    <string name="language_unknown">Onbekende taal</string>
+    <string name="track_n">Spoor %1$d</string>
+    <string name="track_numbered">%1$s (spoor %2$d)</string>
+    <string name="channels_mono">mono</string>
+    <string name="channels_stereo">stereo</string>
+    <string name="channels_multi">meerkanaals</string>
+    <string name="channels_n">%1$d kanalen</string>
+    <string name="audio_ext_impaired">audiodescriptie</string>
+    <string name="audio_ext_commentary">commentaar</string>
+    <string name="audio_ext_commentary_alt">ander commentaar</string>
+    <string name="sub_ext_large">groot</string>
+    <string name="sub_ext_children">voor kinderen</string>
+    <string name="sub_ext_captions">voor doven en slechthorenden</string>
+    <string name="sub_ext_forced">geforceerd</string>
+    <string name="sub_ext_commentary">commentaar</string>
+
+    <!-- Player -->
+    <string name="player_menu_hint">Discmenu: gebruik de pijltjes, dan OK</string>
+    <string name="player_pause">Pauze</string>
+    <string name="player_play">Afspelen</string>
+    <string name="player_error">Deze disc kon niet worden afgespeeld.</string>
+    <string name="player_error_aacs">Deze Blu-ray kon niet worden ontsleuteld: het sleutelbestand bevat waarschijnlijk geen sleutels voor deze schijf. Je kunt een nieuwere KEYDB.cfg laden in de opties, onder Afspelen.</string>
+    <string name="nav_up">Omhoog</string>
+    <string name="nav_down">Omlaag</string>
+    <string name="nav_left">Links</string>
+    <string name="nav_right">Rechts</string>
+    <string name="nav_ok">OK</string>
+    <string name="channel_stereo">Stereo</string>
+    <string name="channel_left">Linkerkanaal</string>
+    <string name="channel_right">Rechterkanaal</string>
+    <string name="channel_all_speakers">Op alle luidsprekers</string>
+    <string name="libaacs_missing_title">libaacs ontbreekt</string>
+    <string name="libaacs_missing_text">Deze Blu-ray is beveiligd en heeft de bibliotheek libaacs nodig, die niet is geïnstalleerd. Installeer de libaacs-APK en start Laser Media Player daarna opnieuw.</string>
+    <string name="keys_title">AACS-sleutelbestand</string>
+    <string name="keys_text">Om beveiligde Blu-rays af te spelen, heeft libaacs zijn sleutelbestand KEYDB.cfg nodig. Kies het bestand of een zip-archief dat het bevat.</string>
+    <string name="keys_choose">Kiezen</string>
+    <string name="keys_loading">Sleutelbestand laden…</string>
+    <string name="keys_not_keydb">Dit bestand is geen AACS-sleutelbestand (KEYDB.cfg) en ook geen zip-archief dat er een bevat.</string>
+    <string name="keys_unreadable">Het bestand kon niet worden gelezen.</string>
+    <string name="keys_no_picker">Dit apparaat heeft geen bestandskiezer om het sleutelbestand mee te kiezen.</string>
+    <string name="keys_none">Geen</string>
+    <string name="keys_load">Nieuwe versie laden</string>
+    <string name="cancel">Annuleren</string>
+    <string name="previous_track">Vorige track</string>
+    <string name="next_track">Volgende track</string>
+    <string name="previous_chapter">Vorig hoofdstuk</string>
+    <string name="next_chapter">Volgend hoofdstuk</string>
+    <string name="disc_menu">Discmenu</string>
+    <string name="fill_screen">Scherm vullen</string>
+    <string name="now_playing">Wordt afgespeeld</string>
+    <string name="tracks_list">Tracks</string>
+    <string name="seek_bar">Positie</string>
+    <string name="chapter_n_of">Hoofdstuk %1$d van %2$d</string>
+    <plurals name="tracks_count">
+        <item quantity="one">%1$d track</item>
+        <item quantity="other">%1$d tracks</item>
+    </plurals>
+    <string name="track_n_of">Track %1$d van %2$d</string>
+
+    <!-- Options -->
+    <string name="options_title">Opties</string>
+    <string name="options_interface">Interface</string>
+    <string name="options_playback">Afspelen</string>
+    <string name="options_covers">Hoezen en posters</string>
+    <string name="options_about">Over</string>
+    <string name="options_language_section">Taal</string>
+    <string name="options_language">Taal van de interface</string>
+    <string name="options_language_short">Taal</string>
+    <string name="options_theme">Thema</string>
+    <string name="theme_dark">Donker</string>
+    <string name="theme_light">Licht</string>
+    <string name="theme_system">Systeemstandaard</string>
+    <string name="language_system">Systeemstandaard</string>
+    <string name="options_tracks">Standaardsporen</string>
+    <string name="options_playback_tracks">Afspelen — standaardsporen</string>
+    <string name="options_hw">Hardwaredecodering</string>
+    <string name="options_playback_hw">Afspelen — hardwaredecodering</string>
+    <string name="options_other">Overige opties</string>
+    <string name="options_playback_other">Afspelen — overige opties</string>
+    <string name="options_menu_arrows">Pijlen tonen in schijfmenu\'s</string>
+    <string name="options_playback_bluray">Afspelen — Blu-ray</string>
+    <string name="options_hw_hint">Uitschakelen als het beeld hapert of fouten vertoont met dit soort disc.</string>
+    <string name="options_audio_language">Audiotaal</string>
+    <string name="options_no_subs_same">Geen ondertitels als de audio in de taal van de interface is</string>
+    <string name="pref_original_language">Originele taal</string>
+
+    <!-- Options: covers and posters -->
+    <string name="options_covers_section">Hoezen en posters</string>
+    <string name="options_online">Online zoeken</string>
+    <string name="lookup_albums">Albumhoezen en -titels</string>
+    <string name="lookup_albums_detail">Gezocht op MusicBrainz</string>
+    <string name="lookup_films">Filmposters en -titels</string>
+    <string name="lookup_films_detail">Gezocht op TMDB</string>
+    <string name="tmdb_key">TMDB-API-sleutel</string>
+    <string name="tmdb_key_hint">De sleutel is gratis: maak een account aan op themoviedb.org en haal je API-sleutel op in de accountinstellingen.</string>
+    <string name="key_none">Geen sleutel</string>
+    <string name="key_checking">Controleren…</string>
+    <string name="key_valid">Geldige sleutel</string>
+    <string name="key_refused">Sleutel geweigerd</string>
+    <string name="key_unverified">Kan niet worden gecontroleerd</string>
+    <string name="key_save">Opslaan</string>
+    <string name="key_delete">Sleutel verwijderen</string>
+    <string name="key_field">API-sleutel</string>
+
+    <!-- Options: about -->
+    <string name="about_version">Versie %1$s · Licentie %2$s</string>
+    <string name="about_licence">Licentie</string>
+    <string name="about_libraries">Gebruikte bibliotheken</string>
+    <string name="about_other_libraries">Andere bibliotheken</string>
+    <string name="about_metadata">Metadata</string>
+    <string name="about_disclaimer">Deze app gebruikt de API\'s van TMDB en MusicBrainz, maar is niet goedgekeurd of gecertificeerd door TMDB of MusicBrainz.</string>
+    <string name="about_in_libvlc">Opgenomen in libvlc %1$s</string>
+    <string name="about_in_app">Opgenomen in de app</string>
+    <string name="lic_or_later">%1$s of later</string>
+    <string name="lic_named">%1$s-licentie</string>
+    <string name="lic_bsd">BSD %1$d-clausule</string>
+    <string name="lic_either">%1$s of %2$s</string>
+</resources>

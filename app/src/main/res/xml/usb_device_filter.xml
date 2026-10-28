@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- USB Mass Storage, Bulk-Only Transport: what liblaser speaks. A USB key
+     matches too; the app leaves it alone (see UsbDrives.kt). -->
+<resources>
+    <usb-device class="8" protocol="80" />
+</resources>
