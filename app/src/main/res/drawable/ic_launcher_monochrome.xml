@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The icon's disc in one colour, for the themed icons of Android 13 and
+     later: the system tints it. The blue arc of ic_launcher_foreground is
+     cut out of the disc, as one colour cannot tell it apart. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillType="evenOdd" android:fillColor="#FF000000"
+        android:pathData="M54,21a33,33 0,1 1,0 66a33,33 0,1 1,0 -66z M54,47.1a6.9,6.9 0,1 0,0 13.8a6.9,6.9 0,1 0,0 -13.8z M54,27.6A26.4,26.4 0,0 1,80.4 54L77.3,54A23.3,23.3 0,0 0,54 30.7Z" />
+</vector>
