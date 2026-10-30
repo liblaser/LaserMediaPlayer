@@ -72,7 +72,7 @@ drive, `LaserPlayer` for the app and `VLC` for libVLC.
 3. Open the project in Android Studio, or run `./gradlew assembleDebug`.
 
 The libaacs provider APK (`org.libaacs.provider`) can be built from this
-branch: https://code.videolan.org/Pierrebog/libaacs/-/tree/libaacs-android-apk
+branch: https://code.videolan.org/Pierrebog/libaacs/-/tree/org-libaacs-provider
 
 ## Layout
 
