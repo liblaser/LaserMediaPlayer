@@ -47,8 +47,67 @@ data class SubtitleTrackInfo(val id: Int, val language: String, val extension: I
  *
  * @param title its number in the disc's title table, from 1, as dvdread
  *              numbers its titles
+ * @param audioIds the audio tracks its program chain carries, by id; null
+ *                 when the disc does not say
+ * @param subtitleIds likewise, its subtitle tracks
+ * @param variants the titles of this same cut localised for several
+ *                 languages - its own credits and audio - itself included;
+ *                 empty when it has none
  */
-data class VersionInfo(val title: Int, val lengthMs: Long, val chapters: Int)
+data class VersionInfo(
+    val title: Int,
+    val lengthMs: Long,
+    val chapters: Int,
+    val audioIds: Set<Int>? = null,
+    val subtitleIds: Set<Int>? = null,
+    val variants: List<VersionInfo> = emptyList(),
+) {
+    /** The audio tracks this version carries, its variants' together; null
+     * when the disc does not say. */
+    val audioCarried: Set<Int>? get() = carried { it.audioIds }
+    val subtitlesCarried: Set<Int>? get() = carried { it.subtitleIds }
+
+    private fun carried(ids: (VersionInfo) -> Set<Int>?): Set<Int>? {
+        val sets = variants.ifEmpty { listOf(this) }.map(ids)
+        if (sets.any { it == null }) return null
+        return sets.flatMapTo(HashSet()) { it.orEmpty() }
+    }
+}
+
+/**
+ * Of one cut's localised titles, the one carrying [audioId] - and
+ * [subtitleId] too, if one does: the version of the film in that language.
+ * Null when nothing tells them apart: no audio track chosen, a disc that
+ * does not say what each carries, or every one of them carrying the tracks.
+ */
+fun pickVariant(variants: List<VersionInfo>, audioId: Int?, subtitleId: Int?): VersionInfo? {
+    if (variants.size < 2 || audioId == null) return null
+    val withAudio = variants.filter { it.audioIds?.contains(audioId) == true }
+    if (withAudio.isEmpty() || variants.any { it.audioIds == null }) return null
+    val withBoth = if (subtitleId == null) emptyList()
+                   else withAudio.filter { it.subtitleIds?.contains(subtitleId) == true }
+    val best = withBoth.ifEmpty { withAudio }
+    if (best.size == variants.size) return null
+    return best.minByOrNull { it.title }
+}
+
+/**
+ * [this] disc with only the tracks [version] carries, for the disc screen
+ * and the default tracks: a version may lack another's commentary, a
+ * localised one has its own audio. Unchanged when the disc does not say,
+ * or when no track would be left.
+ */
+fun DiscInfo.withTracksOf(version: VersionInfo?): DiscInfo {
+    version ?: return this
+    val audio = version.audioCarried
+        ?.let { ids -> audioTracks.filter { it.id in ids } }?.takeIf { it.isNotEmpty() }
+        ?: audioTracks
+    val subtitles = version.subtitlesCarried
+        ?.let { ids -> subtitleTracks.filter { it.id in ids } }?.takeIf { it.isNotEmpty() }
+        ?: subtitleTracks
+    return if (audio.size == audioTracks.size && subtitles.size == subtitleTracks.size) this
+           else copy(audioTracks = audio, subtitleTracks = subtitles)
+}
 
 /** The disc in one drive. */
 data class DiscInfo(
@@ -72,8 +131,13 @@ data class DiscInfo(
     /** A Blu-ray's AACS protection, from laser.c; null if unknown. */
     val aacs: Boolean? = null,
     /** A DVD's versions of the film, the shortest first: none, or two or
-     * more. The main title's tracks and length are the longest's. */
+     * more of different lengths, the user's choice. The main title's length
+     * is the longest's. */
     val versions: List<VersionInfo> = emptyList(),
+    /** Without [versions], the titles of the film's one cut localised for
+     * several languages, played by the audio track chosen: none, or two or
+     * more. */
+    val variants: List<VersionInfo> = emptyList(),
     /** The film on a video disc, from TMDB. */
     val film: FilmInfo? = null,
     /** The lookup of its name and picture is over, found or not - or there
@@ -164,28 +228,60 @@ object LaserMrl {
 object TrackLists {
     const val AUDIO_META = "laser-audio-tracks"
     const val SPU_META = "laser-spu-tracks"
-    /* title,length,chapters, one version per line */
+    /* title,length,chapters,audio,spu, one version per line, the shortest
+     * first; audio and spu are hexadecimal masks of the track ids */
     const val VERSIONS_META = "laser-versions"
     /* Versions closer in length than this, in percent of the longest, are
-     * one version for the user. */
+     * one version for the user: one cut, localised. */
     private const val VERSION_SAME_PERCENT = 3
 
-    /** Two versions or more, else none. Versions all of about one length -
-     * the shortest within VERSION_SAME_PERCENT of the longest - offer no
-     * choice: nothing worth choosing tells them apart. */
+    /** The versions to choose from: two or more of different lengths, else
+     * none. Titles of about one length - within VERSION_SAME_PERCENT of each
+     * other - are one cut localised for several languages: one version, the
+     * lowest-numbered title, holding them as its variants. */
     fun parseVersions(value: String?): List<VersionInfo> {
-        val versions = value.orEmpty().lineSequence().mapNotNull { line ->
+        val cuts = parseCuts(value)
+        return if (cuts.size >= 2) cuts else emptyList()
+    }
+
+    /** With one cut only, its localised titles: two or more, else none. */
+    fun parseVariants(value: String?): List<VersionInfo> =
+        parseCuts(value).singleOrNull()?.variants.orEmpty()
+
+    private fun parseCuts(value: String?): List<VersionInfo> {
+        val titles = value.orEmpty().lineSequence().mapNotNull { line ->
             val f = line.split(',')
             if (f.size < 3) return@mapNotNull null
             val title = f[0].toIntOrNull()?.takeIf { it >= 1 } ?: return@mapNotNull null
             val length = f[1].toLongOrNull()?.takeIf { it > 0 } ?: return@mapNotNull null
-            VersionInfo(title, length, f[2].toIntOrNull() ?: 0)
-        }.toList()
-        if (versions.size < 2) return emptyList()
-        val longest = versions.maxOf { it.lengthMs }
-        val shortest = versions.minOf { it.lengthMs }
-        if ((longest - shortest) * 100 <= longest * VERSION_SAME_PERCENT) return emptyList()
-        return versions
+            VersionInfo(title, length, f[2].toIntOrNull() ?: 0,
+                        audioIds = maskIds(f.getOrNull(3)), subtitleIds = maskIds(f.getOrNull(4)))
+        }.sortedBy { it.lengthMs }.toList()
+        if (titles.size < 2) return emptyList()
+        /* By length, the shortest first: a title within the percentage of
+         * its group's shortest is one of its variants. */
+        val groups = ArrayList<MutableList<VersionInfo>>()
+        for (t in titles) {
+            val group = groups.lastOrNull()
+            if (group != null &&
+                (t.lengthMs - group.first().lengthMs) * 100 <= t.lengthMs * VERSION_SAME_PERCENT)
+                group += t
+            else
+                groups += mutableListOf(t)
+        }
+        return groups.map { group ->
+            val first = group.minBy { it.title }
+            if (group.size < 2) first
+            else first.copy(lengthMs = group.maxOf { it.lengthMs }, variants = group.sortedBy { it.title })
+        }
+    }
+
+    /* A hexadecimal mask of track ids, bit 0 for id 0; null when absent or
+     * none: the disc does not say. */
+    private fun maskIds(value: String?): Set<Int>? {
+        val mask = value?.trim()?.takeIf { it.isNotEmpty() }?.toLongOrNull(16) ?: return null
+        if (mask == 0L) return null
+        return (0 until 32).filterTo(HashSet()) { mask and (1L shl it) != 0L }
     }
 
     fun parseAudio(value: String?): List<AudioTrackInfo> =

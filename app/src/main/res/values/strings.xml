@@ -37,6 +37,7 @@
     <string name="play_with_menus">Play with menus</string>
     <!-- The heading over the tracks and the buttons playing without the menus. -->
     <string name="without_menus_heading">Without the disc\'s menus</string>
+    <string name="with_menus_heading">With the disc\'s menus</string>
     <string name="video_part_heading">Video part</string>
     <string name="play_audio_part">Play the audio part</string>
     <string name="play_video_part">Play the video part</string>
@@ -125,7 +126,7 @@
     <string name="options_playback_hw">Playback — hardware decoding</string>
     <string name="options_other">Other options</string>
     <string name="options_playback_other">Playback — other options</string>
-    <string name="options_menu_arrows">Show arrows in disc menus</string>
+    <string name="options_menu_arrows">Show navigation arrows in DVD and Blu-ray menus</string>
     <string name="options_playback_bluray">Playback — Blu-ray</string>
     <string name="options_hw_hint">Turn off if the picture stutters or shows defects with this kind of disc.</string>
     <string name="options_audio_language">Audio language</string>

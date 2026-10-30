@@ -36,6 +36,7 @@
     <string name="play_with_menus">Afspelen met menu\'s</string>
     <!-- The heading over the tracks and the buttons playing without the menus. -->
     <string name="without_menus_heading">Zonder de menu\'s van de disc</string>
+    <string name="with_menus_heading">Met de menu\'s van de disc</string>
     <string name="video_part_heading">Videogedeelte</string>
     <string name="play_audio_part">Audiogedeelte afspelen</string>
     <string name="play_video_part">Videogedeelte afspelen</string>
@@ -123,7 +124,7 @@
     <string name="options_playback_hw">Afspelen — hardwaredecodering</string>
     <string name="options_other">Overige opties</string>
     <string name="options_playback_other">Afspelen — overige opties</string>
-    <string name="options_menu_arrows">Pijlen tonen in schijfmenu\'s</string>
+    <string name="options_menu_arrows">Navigatiepijlen tonen in dvd- en Blu-ray-menu\'s</string>
     <string name="options_playback_bluray">Afspelen — Blu-ray</string>
     <string name="options_hw_hint">Uitschakelen als het beeld hapert of fouten vertoont met dit soort disc.</string>
     <string name="options_audio_language">Audiotaal</string>

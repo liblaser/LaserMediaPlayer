@@ -116,6 +116,12 @@ class DriveRepository(
     /** Drives classified again for that once already: not again, until a
      * disc is found or the drive reports a change. */
     private val wakeRetried = HashSet<String>()
+    /** Drives being classified with a disc already in: not polled meanwhile.
+     * A poll waits for the drive between the classification's reads, and a
+     * drive struggling with them - underpowered, a bad sector - can take
+     * seconds to answer it; nothing it reports would be acted on. A drive
+     * classified without a disc in is polled, for the disc arriving. */
+    private val quiet = HashSet<String>()
 
     private val usbReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -250,6 +256,7 @@ class DriveRepository(
             }
             while (isActive) {
                 delay(POLL_MS)
+                if (deviceName in quiet) continue
                 val status = withContext(Dispatchers.IO) { LaserDrive.poll(fd) } ?: continue
                 /* It answers now: what it holds can be read. Only once it
                  * reports a disc, as liblaser's readiness check expects -
@@ -273,6 +280,8 @@ class DriveRepository(
     private fun onMedia(deviceName: String, status: LaserDrive.MediaStatus) {
         val drained = drain.remove(deviceName)
         val previousMedium = lastMedium.put(deviceName, status.medium)
+        if (previousMedium != null && previousMedium != status.medium)
+            Log.d(LASER_TAG, "$deviceName: medium $previousMedium -> ${status.medium}")
         val current = _drives.value.firstOrNull { it.deviceName == deviceName }?.status ?: return
         if (DriveConnections.isPlaying(deviceName)) {
             if (status.event == LaserDrive.Event.EJECT_REQUEST) _ejectRequests.tryEmit(deviceName)
@@ -374,15 +383,20 @@ class DriveRepository(
     private suspend fun classifyDrive(device: UsbDevice) {
         if (DriveConnections.isPlaying(device.deviceName)) return
         setStatus(device.deviceName, DriveStatus.Identifying)
-        val started = SystemClock.elapsedRealtime()
-        val classified = classify(device)
+        val mediumBefore = lastMedium[device.deviceName]
+        if (mediumBefore == LaserDrive.Medium.PRESENT) quiet += device.deviceName
+        val (classified, waitedMs) = try {
+            classify(device)
+        } finally {
+            quiet -= device.deviceName
+        }
         /* Nothing found, but after liblaser's whole wait for the drive: it
          * did not answer, rather than holding no disc - which takes seconds
          * at most to tell. Tried again once it answers (see watch); a retry
          * that finds nothing either leaves it not responding. */
         val name = device.deviceName
         val silent = classified == DriveStatus.NoDisc &&
-            (SystemClock.elapsedRealtime() - started >= WAKE_SUSPECT_MS || name in wakeRetried)
+            (waitedMs >= WAKE_SUSPECT_MS || name in wakeRetried)
         val status = if (silent) DriveStatus.NotResponding else classified
         setStatus(device.deviceName, status)
         if (silent && name !in wakeRetried) {
@@ -395,6 +409,17 @@ class DriveRepository(
         /* The insertion classified here may still be reported. */
         drain += device.deviceName
         watch(device.deviceName)
+        /* Nothing found, while the polls - which change nothing while a
+         * drive is identified - saw a disc arrive: a drive reporting the new
+         * disc before it has loaded it, which classification found absent.
+         * Classified once more; that time the medium is present from the
+         * start, so a data disc is not classified again and again. */
+        if (status == DriveStatus.NoDisc && mediumBefore != LaserDrive.Medium.PRESENT &&
+            lastMedium[name] == LaserDrive.Medium.PRESENT) {
+            Log.i(LASER_TAG, "$name: a disc arrived while it was classified, classifying it again")
+            reclassify(name)
+            return
+        }
         val disc = (status as? DriveStatus.Ready)?.disc ?: return
         when (disc.kind) {
             DiscKind.DVD_VIDEO, DiscKind.BLURAY -> nameFilm(disc)
@@ -403,18 +428,25 @@ class DriveRepository(
         }
     }
 
-    private suspend fun classify(device: UsbDevice): DriveStatus {
-        if (!UsbDrives.requestPermission(appContext, device)) return DriveStatus.PermissionDenied
+    /**
+     * What [device] holds, and how long the classification itself took - the
+     * permission and the connection apart: at the app's start, they wait
+     * behind everything else starting, which says nothing of the drive.
+     */
+    private suspend fun classify(device: UsbDevice): Pair<DriveStatus, Long> {
+        if (!UsbDrives.requestPermission(appContext, device)) return DriveStatus.PermissionDenied to 0L
 
         /* Kept open: the drive's one connection (see DriveConnections). */
         val connection: UsbDeviceConnection = withContext(Dispatchers.IO) {
             DriveConnections.open(appContext, device)
         } ?: run {
             Log.w(LASER_TAG, "could not open ${device.deviceName}")
-            return DriveStatus.NoDisc
+            return DriveStatus.NoDisc to 0L
         }
 
+        val started = SystemClock.elapsedRealtime()
         val disc = classifier.classify(connection.fileDescriptor, device.deviceName)
+        val waitedMs = SystemClock.elapsedRealtime() - started
         return when {
             disc == null -> DriveStatus.NoDisc
             /* The cdda module reads the table of contents through the
@@ -424,7 +456,7 @@ class DriveRepository(
             disc.kind == DiscKind.CD_AUDIO -> DriveStatus.Ready(albums.complete(disc).copy(lookupDone = true))
             disc.kind == DiscKind.VIDEO_CD -> DriveStatus.Ready(disc.copy(lookupDone = true))
             else -> DriveStatus.Ready(disc)
-        }
+        } to waitedMs
     }
 
     /**

@@ -9,6 +9,8 @@ import io.github.pierrebog.lasermediaplayer.disc.DiscKind
 import io.github.pierrebog.lasermediaplayer.disc.DiscRow
 import io.github.pierrebog.lasermediaplayer.disc.PlayMode
 import io.github.pierrebog.lasermediaplayer.disc.VersionInfo
+import io.github.pierrebog.lasermediaplayer.disc.pickVariant
+import io.github.pierrebog.lasermediaplayer.disc.withTracksOf
 import io.github.pierrebog.lasermediaplayer.drive.Drive
 import io.github.pierrebog.lasermediaplayer.drive.DriveStatus
 import io.github.pierrebog.lasermediaplayer.resume.ResumePoint
@@ -81,7 +83,10 @@ class HomeViewModel(private val app: LaserApp) : ViewModel() {
             resume = disc?.let { d ->
                 app.resume.resumePoint(d, version?.title)?.takeIf { resumeRow(d, it) != null }
             },
-            tracks = disc?.let { tracksFor(it, defaults) } ?: TrackChoice(null, null),
+            /* Those the version carries: another's commentary, or a
+             * language the version has no variant in, would play nothing. */
+            tracks = disc?.let { tracksFor(it.withTracksOf(version), defaults) }
+                ?: TrackChoice(null, null),
             version = version,
             lookups = lookups,
             blurayMenus = blurayMenus,
@@ -99,8 +104,12 @@ class HomeViewModel(private val app: LaserApp) : ViewModel() {
             (disc.kind == DiscKind.DVD_VIDEO || disc.kind == DiscKind.BLURAY))
             return defaultTracks(disc, defaults)
         val choice = app.resume.trackChoice(disc)
-        return if (choice.audioId != null) choice
-               else choice.copy(audioId = disc.audioTracks.firstOrNull()?.id)
+        /* Tracks of another version than the one now chosen: its first
+         * audio track, and no subtitles. */
+        val audio = if (choice.audioId != null && disc.audioTracks.any { it.id == choice.audioId }) choice
+                    else choice.copy(audioId = disc.audioTracks.firstOrNull()?.id)
+        return if (audio.subtitleId == null || disc.subtitleTracks.any { it.id == audio.subtitleId }) audio
+               else audio.copy(subtitleId = null, subtitlesOff = true)
     }
 
     /** The version chosen for [disc], else the longest - the one whose
@@ -181,8 +190,12 @@ class HomeViewModel(private val app: LaserApp) : ViewModel() {
         }
         row ?: return null
         /* Without the menus, the version chosen: dvdread starts at the
-         * disc's first title. A resumed point has its own title. */
-        val startTitle = state.version
+         * disc's first title. Of a cut localised for several languages, the
+         * title in the audio track's language. A resumed point has its own
+         * title. */
+        val variant = pickVariant(state.version?.variants ?: disc.variants,
+                                  state.tracks.audioId, state.tracks.subtitleId)
+        val startTitle = (variant ?: state.version)
             ?.takeIf { resume == null && row.kind == DiscKind.DVD_VIDEO && row.mode == PlayMode.NO_MENUS }
             ?.let { it.title - 1 }
         return PlaybackRequest(disc, row, options, resume, state.tracks, startTitle)

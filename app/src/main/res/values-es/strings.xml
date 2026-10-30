@@ -36,6 +36,7 @@
     <string name="play_with_menus">Reproducir con menús</string>
     <!-- The heading over the tracks and the buttons playing without the menus. -->
     <string name="without_menus_heading">Sin los menús del disco</string>
+    <string name="with_menus_heading">Con los menús del disco</string>
     <string name="video_part_heading">Parte de vídeo</string>
     <string name="play_audio_part">Reproducir la parte de audio</string>
     <string name="play_video_part">Reproducir la parte de vídeo</string>
@@ -124,7 +125,7 @@
     <string name="options_playback_hw">Reproducción — decodificación por hardware</string>
     <string name="options_other">Otras opciones</string>
     <string name="options_playback_other">Reproducción — otras opciones</string>
-    <string name="options_menu_arrows">Mostrar flechas en los menús de disco</string>
+    <string name="options_menu_arrows">Mostrar flechas de navegación en los menús de DVD y Blu-ray</string>
     <string name="options_playback_bluray">Reproducción — Blu-ray</string>
     <string name="options_hw_hint">Desactívala si la imagen va a saltos o muestra defectos con este tipo de disco.</string>
     <string name="options_audio_language">Idioma del audio</string>

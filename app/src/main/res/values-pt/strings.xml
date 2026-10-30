@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
 
     <string name="settings">Configurações</string>
     <string name="refresh">Atualizar</string>
@@ -36,6 +36,7 @@
     <string name="play_with_menus">Reproduzir com menus</string>
     <!-- The heading over the tracks and the buttons playing without the menus. -->
     <string name="without_menus_heading">Sem os menus do disco</string>
+    <string name="with_menus_heading">Com os menus do disco</string>
     <string name="video_part_heading">Parte de vídeo</string>
     <string name="play_audio_part">Reproduzir a parte de áudio</string>
     <string name="play_video_part">Reproduzir a parte de vídeo</string>
@@ -124,7 +125,7 @@
     <string name="options_playback_hw">Reprodução — decodificação por hardware</string>
     <string name="options_other">Outras opções</string>
     <string name="options_playback_other">Reprodução — outras opções</string>
-    <string name="options_menu_arrows">Mostrar setas nos menus dos discos</string>
+    <string name="options_menu_arrows">Mostrar setas de navegação nos menus de DVD e Blu-ray</string>
     <string name="options_playback_bluray">Reprodução — Blu-ray</string>
     <string name="options_hw_hint">Desative se a imagem travar ou apresentar defeitos com este tipo de disco.</string>
     <string name="options_audio_language">Idioma do áudio</string>

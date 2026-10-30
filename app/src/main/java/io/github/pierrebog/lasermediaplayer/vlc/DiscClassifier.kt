@@ -136,6 +136,7 @@ class DiscClassifier(private val engine: VlcEngine) {
             audioTracks = TrackLists.parseAudio(video?.getMetaExtra(TrackLists.AUDIO_META)),
             subtitleTracks = TrackLists.parseSubtitles(video?.getMetaExtra(TrackLists.SPU_META)),
             versions = TrackLists.parseVersions(video?.getMetaExtra(TrackLists.VERSIONS_META)),
+            variants = TrackLists.parseVariants(video?.getMetaExtra(TrackLists.VERSIONS_META)),
             discId = medias.firstNotNullOfOrNull { it.getMetaExtra(DISC_ID_META) },
             mainLengthMs = medias.firstNotNullOfOrNull { it.getMetaExtra(MAIN_LENGTH_META) }
                 ?.toLongOrNull() ?: 0,

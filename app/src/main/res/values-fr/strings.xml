@@ -32,6 +32,7 @@
     <string name="play_with_menus">Lire avec les menus</string>
     <!-- The heading over the tracks and the buttons playing without the menus. -->
     <string name="without_menus_heading">Sans les menus du disque</string>
+    <string name="with_menus_heading">Avec les menus du disque</string>
     <string name="video_part_heading">Partie vidéo</string>
     <string name="play_audio_part">Lire la partie audio</string>
     <string name="play_video_part">Lire la partie vidéo</string>
@@ -118,7 +119,7 @@
     <string name="options_playback_hw">Lecture — décodage matériel</string>
     <string name="options_other">Autres options</string>
     <string name="options_playback_other">Lecture — autres options</string>
-    <string name="options_menu_arrows">Afficher les flèches dans les menus des disques</string>
+    <string name="options_menu_arrows">Afficher les flèches de navigation dans les menus des DVDs et Blu-rays</string>
     <string name="options_playback_bluray">Lecture — Blu-ray</string>
     <string name="options_hw_hint">À désactiver si l\'image saccade ou présente des défauts avec ce type de disque.</string>
     <string name="options_audio_language">Langue audio</string>

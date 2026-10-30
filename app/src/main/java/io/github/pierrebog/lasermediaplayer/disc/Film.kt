@@ -106,7 +106,20 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
             val match = Tmdb.find(query, disc.mainLengthMs, language, key, partial = part != null)
             Log.d(LASER_TAG, "film \"$query\" (${disc.mainLengthMs / 60_000} min): " +
                              (match?.let { "${it.title} (${it.year})" } ?: "no match"))
-            if (match != null) return match.copy(title = match.title + part?.let { " – $it" }.orEmpty())
+            if (match != null) {
+                /* A film whose name does not hold the query, words in order,
+                 * gives way to a series named so: "Band of Brothers", a disc
+                 * of its episodes, found "The Naked Brothers Band: Battle of
+                 * the Bands" of about an episode's length. */
+                if (!match.exactName) {
+                    val show = Tmdb.findShow(query, null, language, key)
+                    if (show?.exactName == true) {
+                        Log.d(LASER_TAG, "series \"$query\": ${show.title}, named so rather than the film")
+                        return show
+                    }
+                }
+                return match.copy(title = match.title + part?.let { " – $it" }.orEmpty())
+            }
         }
         return Tmdb.findShow(queries.first(), null, language, key).also {
             Log.d(LASER_TAG, "series \"${queries.first()}\": ${it?.title ?: "no match"}")
@@ -128,6 +141,9 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
             else if (o.optBoolean("none")) Result.failure(NoSuchElementException())
             /* Found before the original language was kept: looked up again. */
             else if (!o.has("original")) null
+            /* Found by older matching rules, which could take a sequel of
+             * about the same length: looked up again, when it can be. */
+            else if (o.optInt("match", 1) < MATCH && settings.lookups.value.filmsOnline) null
             /* Found without its poster before the poster's address was kept:
              * looked up again, for the address. */
             else if (!o.has("poster") && !File(dir, "$id.jpg").isFile &&
@@ -152,7 +168,7 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
         val o = if (film == null) JSONObject().put("none", true).put("rules", RULES)
                 else JSONObject().put("title", film.title).put("year", film.year ?: "")
                     .put("original", film.originalLanguage ?: "")
-                    .put("poster", posterUrl ?: "")
+                    .put("poster", posterUrl ?: "").put("match", MATCH)
         try {
             dir.mkdirs()
             val tmp = File(dir, "$id.json.tmp")
@@ -190,6 +206,9 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
         /* Bumped when the lookup finds more: discs found by none of the
          * earlier rules are looked up again. */
         private const val RULES = 4
+        /* Bumped when the lookup matches better: films found by earlier
+         * rules are looked up again. */
+        private const val MATCH = 3
         /* A season in a title: S1, S02D3, SEASON 3, SAISON 1, SERIES 2... */
         private val SEASON = Regex(
             """(?i)[\s_.\-]+(?:S|SEASON|SAISON|SERIES|STAFFEL|TEMPORADA|STAGIONE)[\s_.\-]*(\d{1,2})(?=$|[\s_.\-]|D\d|DVD|DISC|DISK)""")
@@ -286,9 +305,12 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
     }
 }
 
-/** What TMDB answered for a disc. */
+/** What TMDB answered for a disc. [exactName]: its name, or its original
+ * name, holds the query's words in order - "Fellowship of the Ring" in "The
+ * Lord of the Rings: The Fellowship of the Ring", not "Band of Brothers" in
+ * "The Naked Brothers Band: Battle of the Bands". */
 data class TmdbMatch(val title: String, val year: String?, val posterUrl: String?,
-                     val originalLanguage: String? = null)
+                     val originalLanguage: String? = null, val exactName: Boolean = true)
 
 /**
  * TMDB's search, then each candidate's running time against the disc's.
@@ -299,15 +321,22 @@ object Tmdb {
     private const val IMAGES = "https://image.tmdb.org/t/p/w500"
     private const val TIMEOUT_MS = 10_000
     private const val CANDIDATES = 5
+    /* A running time this close to the disc's is the film: no need to look
+     * further. */
+    private const val CLOSE_MS = 60_000L
 
     /**
      * The film [query] names, in [language], or null if no candidate fits.
      *
-     * With the main title's length, the first candidate (in TMDB's order)
-     * whose running time is within max(6 min, 8 %) of it: a PAL disc runs
-     * 4 % fast, and a disc's main title may hold more or less of the
-     * credits. Without it, the first candidate if its title holds all the
-     * query's words: "Fellowship of the Ring" is "The Lord of the Rings: The
+     * With the main title's length, the candidate whose running time is
+     * closest to it, within max(6 min, 8 %): a disc's main title may hold
+     * more or less of the credits. A PAL disc plays a film 4 % fast, so the
+     * running time is also compared sped up: "Vaiana" (107 min) is 103 min
+     * on a PAL DVD, closer to "Vaiana 2" (100 min) than to itself otherwise.
+     * Of candidates as close, the first in TMDB's order; one within a minute
+     * ends the search.
+     * Without it, the first candidate if its title holds all the query's
+     * words: "Fellowship of the Ring" is "The Lord of the Rings: The
      * Fellowship of the Ring".
      * A [partial] disc holds a side or a part of the film: its main title
      * is shorter than the film, by up to three quarters.
@@ -322,14 +351,32 @@ object Tmdb {
         val candidates = (0 until minOf(results.length(), CANDIDATES)).map { results.getJSONObject(it) }
 
         val chosen = if (mainLengthMs > 0) {
-            candidates.firstOrNull { c ->
-                val details = JSONObject(get("$API/movie/${c.getInt("id")}?language=$language", key))
-                val runtimeMs = details.optLong("runtime") * 60_000
-                val tolerance = max(6 * 60_000L, mainLengthMs * 8 / 100)
-                runtimeMs > 0 && if (partial)
-                    mainLengthMs >= runtimeMs / 4 && mainLengthMs <= runtimeMs + tolerance
-                else
-                    abs(runtimeMs - mainLengthMs) <= tolerance
+            val tolerance = max(6 * 60_000L, mainLengthMs * 8 / 100)
+            fun runtimeOf(c: JSONObject): Long =
+                JSONObject(get("$API/movie/${c.getInt("id")}?language=$language", key))
+                    .optLong("runtime") * 60_000
+            if (partial) {
+                candidates.firstOrNull { c ->
+                    val runtimeMs = runtimeOf(c)
+                    runtimeMs > 0 && mainLengthMs >= runtimeMs / 4 &&
+                        mainLengthMs <= runtimeMs + tolerance
+                }
+            } else {
+                var best: JSONObject? = null
+                var bestGap = Long.MAX_VALUE
+                for (c in candidates) {
+                    val runtimeMs = runtimeOf(c)
+                    if (runtimeMs <= 0) continue
+                    /* At 25 frames a second instead of 24: PAL. */
+                    val gap = minOf(abs(runtimeMs - mainLengthMs),
+                                    abs(runtimeMs * 24 / 25 - mainLengthMs))
+                    if (gap <= tolerance && gap < bestGap) {
+                        best = c
+                        bestGap = gap
+                    }
+                    if (bestGap <= CLOSE_MS) break
+                }
+                best
             }
         } else {
             candidates.firstOrNull()?.takeIf {
@@ -342,6 +389,8 @@ object Tmdb {
             year = chosen.optString("release_date").take(4).ifEmpty { null },
             posterUrl = chosen.optString("poster_path").takeIf { it.startsWith("/") }?.let { IMAGES + it },
             originalLanguage = chosen.optString("original_language").ifEmpty { null },
+            exactName = phrase(chosen.optString("title"), query) ||
+                phrase(chosen.optString("original_title"), query),
         )
     }
 
@@ -376,7 +425,9 @@ object Tmdb {
             }
         }
         return TmdbMatch(title, year, poster?.let { IMAGES + it },
-                         show.optString("original_language").ifEmpty { null })
+                         show.optString("original_language").ifEmpty { null },
+                         phrase(show.optString("name"), query) ||
+                             phrase(show.optString("original_name"), query))
     }
 
     fun download(url: String, dest: File): File? {
@@ -402,6 +453,14 @@ object Tmdb {
     private fun holds(title: String, query: String): Boolean {
         val wanted = words(query)
         return wanted.isNotEmpty() && words(title).containsAll(wanted)
+    }
+
+    /** [title] has the words of [query] in a row, in order, case and accents
+     * aside. */
+    private fun phrase(title: String, query: String): Boolean {
+        val wanted = words(query)
+        return wanted.isNotEmpty() &&
+            java.util.Collections.indexOfSubList(words(title), wanted) >= 0
     }
 
     private fun words(text: String): List<String> =

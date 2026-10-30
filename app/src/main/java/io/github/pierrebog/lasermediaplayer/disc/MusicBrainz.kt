@@ -40,7 +40,10 @@ data class MusicBrainzMatch(val album: AlbumInfo, val coverUrls: List<String>)
  * ID was never submitted.
  *
  * On a release of several discs, the medium holding this disc is the one
- * used - the one carrying its ID, else the first with as many tracks.
+ * used - the one carrying its ID, else one with as many tracks, of lengths
+ * close to the disc's. An album is also found in the box sets reissuing it:
+ * the release of the fewest discs is taken, "The Division Bell" rather
+ * than "Discovery", Pink Floyd's box of their studio albums.
  */
 object MusicBrainz {
 
@@ -71,7 +74,7 @@ object MusicBrainz {
                   "&inc=artist-credits+recordings+release-groups"
         try {
             val json = get(url) ?: return@withContext null
-            matchOf(JSONObject(json), discId, starts.size).also {
+            matchOf(JSONObject(json), discId, lengthsMs).also {
                 Log.d(LASER_TAG, "MusicBrainz $discId: ${it?.album?.title ?: "no match"}")
             }
         } catch (e: Exception) {
@@ -118,27 +121,31 @@ object MusicBrainz {
             .replace('+', '.').replace('/', '_').replace('=', '-')
     }
 
-    private fun matchOf(root: JSONObject, discId: String, trackCount: Int): MusicBrainzMatch? {
-        val releases = root.optJSONArray("releases") ?: return null
-        /* The medium carrying this very disc, else one with as many tracks. */
-        var chosen: Pair<JSONObject, JSONObject>? = null
-        loop@ for (exact in listOf(true, false)) {
-            for (release in releases.objects()) {
-                for (medium in release.optJSONArray("media").objects()) {
-                    val matches = if (exact)
-                        medium.optJSONArray("discs").objects().any { it.optString("id") == discId }
-                    else
-                        medium.optInt("track-count", -1) == trackCount
-                    if (matches) {
-                        chosen = release to medium
-                        break@loop
-                    }
-                }
-            }
+    private fun matchOf(root: JSONObject, discId: String, lengthsMs: List<Long>): MusicBrainzMatch? {
+        val media = root.optJSONArray("releases").objects().flatMap { release ->
+            release.optJSONArray("media").objects().map { release to it }
         }
-        val (release, medium) = chosen ?: return null
+        /* The media carrying this very disc, else those with as many tracks. */
+        val candidates = media.filter { (_, medium) ->
+            medium.optJSONArray("discs").objects().any { it.optString("id") == discId }
+        }.ifEmpty {
+            media.filter { (_, medium) -> medium.optInt("track-count", -1) == lengthsMs.size }
+        }
+        if (candidates.isEmpty()) return null
+        /* Of a box set's discs, several may have as many tracks: those whose
+         * lengths are close, when MusicBrainz knows them. Then the release
+         * of the fewest discs - the album rather than a box reissuing it -
+         * and the closest lengths; MusicBrainz's order otherwise. */
+        val close = candidates.mapNotNull { c -> gapOf(c.second, lengthsMs)?.let { c to it.first } }
+        val (release, medium) = if (close.isNotEmpty())
+            close.minWith(compareBy({ mediaCount(it.first.first) }, { it.second })).first
+        else
+            candidates.minBy { mediaCount(it.first) }
         return matchOf(release, medium)
     }
+
+    private fun mediaCount(release: JSONObject): Int =
+        release.optJSONArray("media")?.length()?.takeIf { it > 0 } ?: 1
 
     /**
      * Looks a DVD-Audio up: it has no disc ID, so its label, written as a

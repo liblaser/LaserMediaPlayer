@@ -10,7 +10,7 @@ libVLC 4 and liblaser.
 
 **Plug the drive in.** Connect a USB CD, DVD or Blu-ray drive - on a phone,
 through an OTG adapter - and grant the USB permission Android asks for. The
-disc in it is identified, which takes a few seconds, more for a Blu-ray, and
+disc in it is identified, which takes a few seconds, more for a Blu-ray, then
 the disc screen shows its title and controls to play it.
 
 **Blu-rays.** A commercial Blu-ray is protected by AACS and needs:

@@ -1,6 +1,7 @@
 package io.github.pierrebog.lasermediaplayer.vlc
 
 import android.content.Context
+import android.system.Os
 import io.github.pierrebog.lasermediaplayer.BuildConfig
 import io.github.pierrebog.lasermediaplayer.settings.interfaceLocale
 import org.videolan.libvlc.LibVLC
@@ -12,6 +13,13 @@ import java.util.Locale
  * playback.
  */
 class VlcEngine(context: Context) {
+
+    init {
+        /* libdvdcss tells, in a debug build, how it authenticates and which
+         * sectors it reads - logged by VLC-std. Read on each disc it opens,
+         * so set before the first. */
+        if (BuildConfig.DEBUG) Os.setenv("DVDCSS_VERBOSE", "2", true)
+    }
 
     val libVlc: ILibVLC = LibVLC(context.applicationContext, options())
 

@@ -743,7 +743,10 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         if (kind != DiscKind.DVD_VIDEO || title < 0 || request.disc.versions.isEmpty())
             return null
         val number = if (request.row.mode == PlayMode.MENUS) title else title + 1
-        return request.disc.versions.firstOrNull { it.title == number }?.title
+        /* A localised title is its version's */
+        return request.disc.versions.firstOrNull { v ->
+            v.title == number || v.variants.any { it.title == number }
+        }?.title
     }
 
     /* The last version played: dvdread goes on to the next titles after it,

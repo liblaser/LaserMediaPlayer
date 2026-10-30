@@ -50,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.pierrebog.lasermediaplayer.R
 import io.github.pierrebog.lasermediaplayer.disc.DiscInfo
 import io.github.pierrebog.lasermediaplayer.disc.DiscKind
+import io.github.pierrebog.lasermediaplayer.disc.withTracksOf
 import io.github.pierrebog.lasermediaplayer.drive.Drive
 import io.github.pierrebog.lasermediaplayer.drive.DriveStatus
 import io.github.pierrebog.lasermediaplayer.resume.TrackChoice
@@ -156,7 +157,8 @@ fun HomeScreen(vm: HomeViewModel, onPlay: (PlaybackRequest) -> Unit, onOptions: 
                                      stringResource(R.string.allow_access), { vm.refresh(true) })
                     is DriveStatus.Ready ->
                         DiscPanel(
-                            disc = status.disc,
+                            /* Its tracks, the version chosen's */
+                            disc = status.disc.withTracksOf(state.version),
                             state = state,
                             form = form,
                             actions = vm.actionsFor(status.disc, state),
@@ -171,7 +173,7 @@ fun HomeScreen(vm: HomeViewModel, onPlay: (PlaybackRequest) -> Unit, onOptions: 
             }
         }
 
-        val disc = (state.selected?.status as? DriveStatus.Ready)?.disc
+        val disc = (state.selected?.status as? DriveStatus.Ready)?.disc?.withTracksOf(state.version)
         if (disc != null) when (sheet) {
             Sheet.AUDIO -> if (disc.kind == DiscKind.VIDEO_CD)
                 ChannelSheet(state.tracks, form,
@@ -395,31 +397,47 @@ private fun DiscPanel(
             if (apart != null) {
                 val inset = if (tv) 16.dp else 12.dp
                 val shape = RoundedCornerShape(12.dp)
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(shape)
-                        .background(LaserColors.Card)
-                        .border(1.dp, LaserColors.Track, shape)
-                        .padding(inset),
-                    verticalArrangement = Arrangement.spacedBy(gap),
-                ) {
-                    Text(stringResource(if (apart == PlayAction.MENUS) R.string.without_menus_heading
-                                        else R.string.video_part_heading).uppercase(),
-                         fontFamily = BodyFamily, fontWeight = FontWeight.SemiBold,
-                         fontSize = if (tv) 15.sp else 12.sp, letterSpacing = 0.08.em,
-                         color = LaserColors.Muted)
+                /* A card with its heading: each way of playing the disc in
+                 * its own. */
+                val section: @Composable (Int, @Composable () -> Unit) -> Unit = { heading, content ->
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(shape)
+                            .background(LaserColors.Card)
+                            .border(1.dp, LaserColors.Track, shape)
+                            .padding(inset),
+                        verticalArrangement = Arrangement.spacedBy(gap),
+                    ) {
+                        Text(stringResource(heading).uppercase(),
+                             fontFamily = BodyFamily, fontWeight = FontWeight.SemiBold,
+                             fontSize = if (tv) 15.sp else 12.sp, letterSpacing = 0.08.em,
+                             color = LaserColors.Muted)
+                        content()
+                    }
+                }
+                section(if (apart == PlayAction.MENUS) R.string.without_menus_heading
+                        else R.string.video_part_heading) {
                     tracks()
                     actions.forEachIndexed { i, action ->
                         if (action != apart) playButton(i, action)
                     }
                 }
-                Column(Modifier.padding(horizontal = inset),
-                       verticalArrangement = Arrangement.spacedBy(gap)) {
-                    actions.forEachIndexed { i, action ->
-                        if (action == apart) playButton(i, action)
+                /* With the menus, in a section of its own too; a DVD's audio
+                 * part, a single button, stays apart below. */
+                if (apart == PlayAction.MENUS)
+                    section(R.string.with_menus_heading) {
+                        actions.forEachIndexed { i, action ->
+                            if (action == apart) playButton(i, action)
+                        }
                     }
-                }
+                else
+                    Column(Modifier.padding(horizontal = inset),
+                           verticalArrangement = Arrangement.spacedBy(gap)) {
+                        actions.forEachIndexed { i, action ->
+                            if (action == apart) playButton(i, action)
+                        }
+                    }
             } else {
                 tracks()
                 Column(verticalArrangement = Arrangement.spacedBy(gap)) {

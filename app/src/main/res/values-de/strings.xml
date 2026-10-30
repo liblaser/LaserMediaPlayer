@@ -36,6 +36,7 @@
     <string name="play_with_menus">Mit Menüs abspielen</string>
     <!-- The heading over the tracks and the buttons playing without the menus. -->
     <string name="without_menus_heading">Ohne die Disc-Menüs</string>
+    <string name="with_menus_heading">Mit den Disc-Menüs</string>
     <string name="video_part_heading">Videoteil</string>
     <string name="play_audio_part">Audioteil abspielen</string>
     <string name="play_video_part">Videoteil abspielen</string>
@@ -123,7 +124,7 @@
     <string name="options_playback_hw">Wiedergabe — Hardware-Decodierung</string>
     <string name="options_other">Weitere Optionen</string>
     <string name="options_playback_other">Wiedergabe — weitere Optionen</string>
-    <string name="options_menu_arrows">Pfeile in Disc-Menüs anzeigen</string>
+    <string name="options_menu_arrows">Navigationspfeile in DVD- und Blu-ray-Menüs anzeigen</string>
     <string name="options_playback_bluray">Wiedergabe — Blu-ray</string>
     <string name="options_hw_hint">Deaktivieren, wenn das Bild bei dieser Art von Disc ruckelt oder Fehler zeigt.</string>
     <string name="options_audio_language">Audiosprache</string>
