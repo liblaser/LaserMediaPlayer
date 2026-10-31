@@ -24,7 +24,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.videolan.libvlc.Media
 import org.videolan.libvlc.interfaces.IMedia
-import org.videolan.libvlc.util.MediaBrowser
 import kotlin.coroutines.resume
 
 /**
@@ -36,8 +35,10 @@ import kotlin.coroutines.resume
  * exact disc ID. The result and the cover are kept, so that a CD seen
  * before needs no network.
  *
- * Runs during classification, while the drive's connection is open: the
- * cdda module reads the table of contents through it.
+ * The tracks are listed during classification, while the drive's
+ * connection is open: the cdda module reads the table of contents through
+ * it. MusicBrainz is asked after the disc is shown ([online]), as TMDB is
+ * for a film: no drive needed, the lengths are enough.
  *
  * MusicBrainz is asked only when the lookup is on; what is kept is used
  * either way. The cdda module never goes on the network itself.
@@ -67,8 +68,10 @@ class AlbumLookup(
     )
 
     /**
-     * [disc] with its table of contents and what is known of it; [disc]
-     * itself if the tracks cannot be listed. Never throws.
+     * [disc] with its table of contents and what is known of it without the
+     * network: what is kept, else its CD-Text; [disc] itself if the tracks
+     * cannot be listed. Its lookup is done unless MusicBrainz is still to be
+     * asked, with [online]. Never throws.
      */
     suspend fun complete(disc: DiscInfo): DiscInfo {
         val mrl = disc.rows.firstOrNull { it.kind == DiscKind.CD_AUDIO }?.mrl ?: return disc
@@ -91,11 +94,13 @@ class AlbumLookup(
 
         store.load(id)?.let {
             Log.d(LASER_TAG, "album $id: known, \"${it.title}\"")
-            return withToc.copy(album = it)
+            return withToc.copy(album = it, lookupDone = true)
         }
 
-        val fromDisc = cdText(entries)
-        return online(withToc) ?: withToc.copy(album = fromDisc)
+        /* The CD-Text meanwhile, and for good if MusicBrainz is not asked
+         * or finds nothing. */
+        return withToc.copy(album = cdText(entries),
+                            lookupDone = !settings.lookups.value.albumsOnline)
     }
 
     /**
@@ -192,56 +197,88 @@ class AlbumLookup(
     }
 
     /**
-     * Lists the CD's tracks through the cdda module.
+     * Lists the CD's tracks through the cdda module: parsed, as
+     * DiscClassifier does - the parse ends, with a status, whatever happens,
+     * and libVLC's timeout interrupts it, so that the drive is let go before
+     * this returns.
      *
      * @return the tracks, or null if the listing failed or timed out
      */
     private suspend fun browse(mrl: String): List<Entry>? {
-        var browser: MediaBrowser? = null
+        /* Touched on the handler thread only. */
         var media: Media? = null
-        val collected = ArrayList<Entry>()
         try {
-            return withTimeoutOrNull(BROWSE_TIMEOUT) {
-                suspendCancellableCoroutine<List<Entry>> { cont ->
+            /* The parse's status, or null if libVLC never ended it. */
+            val status = withTimeoutOrNull(SAFETY_TIMEOUT) {
+                suspendCancellableCoroutine<Int> { cont ->
                     handler.post {
-                        val listener = object : MediaBrowser.EventListener {
-                            override fun onMediaAdded(index: Int, media: IMedia) {
-                                collected.add(entryOf(media))
-                            }
-
-                            override fun onMediaRemoved(index: Int, media: IMedia) {}
-
-                            override fun onBrowseEnd() {
-                                if (cont.isActive) cont.resume(ArrayList(collected))
-                            }
-                        }
                         /* The tracks and their CD-Text only: the cdda module
                          * would otherwise ask MusicBrainz itself. */
-                        media = Media(engine.libVlc, mrl.toUri()).apply {
+                        val m = Media(engine.libVlc, mrl.toUri()).apply {
                             addOption(":no-metadata-network-access")
                         }
-                        browser = MediaBrowser(engine.libVlc, listener, handler).also {
-                            it.browse(media!!, 0)
+                        media = m
+                        /* Any thread: only resumes the caller. */
+                        m.setEventListener { event ->
+                            if (event.type == IMedia.Event.ParsedChanged && cont.isActive)
+                                cont.resume(event.parsedStatus)
                         }
+                        if (!m.parseAsync(IMedia.Parse.ParseNetwork, BROWSE_TIMEOUT_MS) &&
+                            cont.isActive)
+                            cont.resume(IMedia.ParsedStatus.Failed)
                     }
                 }
-            }.also { if (it == null) Log.w(LASER_TAG, "listing $mrl timed out") }
-        } finally {
-            /* Released before the caller closes the drive's connection. */
-            withContext(NonCancellable) {
-                suspendCancellableCoroutine<Unit> { cont ->
-                    val posted = handler.post {
-                        runCatching { browser?.release() }
-                        browser = null
-                        runCatching { media?.release() }
-                        media = null
-                        if (cont.isActive) cont.resume(Unit)
+            }
+            if (status != IMedia.ParsedStatus.Done) {
+                Log.w(LASER_TAG, "listing $mrl " + when (status) {
+                    null -> "never ended"
+                    IMedia.ParsedStatus.Timeout -> "timed out"
+                    else -> "failed ($status)"
+                })
+                return null
+            }
+            return onHandler {
+                val list = media?.subItems() ?: return@onHandler emptyList()
+                try {
+                    (0 until list.count).mapNotNull { i ->
+                        list.getMediaAt(i)?.let { item ->
+                            try {
+                                entryOf(item)
+                            } finally {
+                                item.release()
+                            }
+                        }
                     }
-                    if (!posted && cont.isActive) cont.resume(Unit)
+                } finally {
+                    list.release()
+                }
+            }
+        } finally {
+            /* NonCancellable: a cancelled caller must still release the
+             * media, which holds the parse's input. */
+            withContext(NonCancellable) {
+                onHandler {
+                    media?.setEventListener(null)
+                    media?.release()
+                    media = null
                 }
             }
         }
     }
+
+    /** Runs [block] on [handler]'s thread and returns its result - on the
+     * calling thread if that one has quit. */
+    private suspend fun <T> onHandler(block: () -> T): T =
+        suspendCancellableCoroutine { cont ->
+            val posted = handler.post {
+                val result = runCatching(block)
+                if (cont.isActive) cont.resumeWith(result)
+            }
+            if (!posted) {
+                val result = runCatching(block)
+                if (cont.isActive) cont.resumeWith(result)
+            }
+        }
 
     private fun entryOf(media: IMedia): Entry {
         fun meta(m: Int) = media.getMeta(m)?.trim()?.takeIf { it.isNotEmpty() }
@@ -255,7 +292,11 @@ class AlbumLookup(
     }
 
     private companion object {
-        val BROWSE_TIMEOUT = 15.seconds
+        /* libVLC's, in milliseconds. */
+        const val BROWSE_TIMEOUT_MS = 15_000
+        /* In case libVLC never ends the parse: past its own timeout, and
+         * past liblaser's longest wait, which no interrupt cuts short. */
+        val SAFETY_TIMEOUT = 45.seconds
         /* laser.c's own name for a disc without a label among them. */
         val GENERIC_DVDA = setOf("DVD", "DVD AUDIO", "DVDAUDIO", "AUDIO", "AUDIO TS", "DVDA")
     }

@@ -76,6 +76,12 @@ fun HomeScreen(vm: HomeViewModel, onPlay: (PlaybackRequest) -> Unit, onOptions: 
     val form = rememberFormFactor()
     val tv = form == FormFactor.TV
     var sheet by remember { mutableStateOf<Sheet?>(null) }
+    /* A sheet is the disc's: closed when another disc, or none, is shown -
+     * rather than coming back over the next one. */
+    val shownDisc = state.selected?.let { drive ->
+        (drive.status as? DriveStatus.Ready)?.let { drive.deviceName to it.disc.key }
+    }
+    LaunchedEffect(shownDisc) { sheet = null }
 
     /* A protected Blu-ray needs libaacs, from the provider APK, and its key
      * database: the first time, the user chooses the file (AacsKeys), and
@@ -87,6 +93,12 @@ fun HomeScreen(vm: HomeViewModel, onPlay: (PlaybackRequest) -> Unit, onOptions: 
     var askKeys by remember { mutableStateOf(false) }
     var loadingKeys by remember { mutableStateOf(false) }
     var keysError by remember { mutableStateOf<AacsKeys.Result?>(null) }
+    /* The request's disc is still in its drive: not swapped, nor the drive
+     * unplugged, while the file picker was open. */
+    fun stillThere(request: PlaybackRequest): Boolean = state.drives.any { drive ->
+        drive.deviceName == request.disc.deviceName &&
+            (drive.status as? DriveStatus.Ready)?.disc?.key == request.disc.key
+    }
     val pickKeys = rememberKeyFilePicker(
         onLoading = { loadingKeys = true },
         onResult = { result ->
@@ -95,7 +107,7 @@ fun HomeScreen(vm: HomeViewModel, onPlay: (PlaybackRequest) -> Unit, onOptions: 
             waitingForKeys = null
             when (result) {
                 null -> {}
-                AacsKeys.Result.LOADED -> request?.let(onPlay)
+                AacsKeys.Result.LOADED -> request?.takeIf(::stillThere)?.let(onPlay)
                 else -> keysError = result
             }
         },
@@ -146,6 +158,10 @@ fun HomeScreen(vm: HomeViewModel, onPlay: (PlaybackRequest) -> Unit, onOptions: 
                     DriveStatus.NoDisc ->
                         StateMessage(stringResource(R.string.state_no_disc),
                                      stringResource(R.string.state_no_disc_hint))
+                    /* Closing it is noticed on its own. */
+                    DriveStatus.TrayOpen ->
+                        StateMessage(stringResource(R.string.state_tray_open),
+                                     stringResource(R.string.state_tray_open_hint))
                     /* Said as it is: why the drive is silent, and what would
                      * wake it, are not known for sure. */
                     DriveStatus.NotResponding ->
@@ -280,6 +296,7 @@ private fun DriveChips(drives: List<Drive>, selected: Drive?, onSelect: (Drive) 
                 is DriveStatus.Ready -> discTitle(s.disc)
                 DriveStatus.Identifying -> stringResource(R.string.drive_identifying)
                 DriveStatus.NotResponding -> stringResource(R.string.drive_not_responding)
+                DriveStatus.TrayOpen -> stringResource(R.string.drive_tray_open)
                 else -> stringResource(R.string.drive_empty)
             }
             Column(
@@ -469,7 +486,8 @@ private fun DiscPanel(
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
-                DiscCase(disc, 216.dp, Modifier.align(Alignment.CenterHorizontally))
+                /* Every case as tall as a 216 dp wide poster, 316 dp. */
+                DiscCase(disc, discCaseWidth(disc, 316.dp), Modifier.align(Alignment.CenterHorizontally))
                 details()
             }
         FormFactor.LANDSCAPE, FormFactor.TV -> BoxWithConstraints(Modifier.fillMaxSize()) {

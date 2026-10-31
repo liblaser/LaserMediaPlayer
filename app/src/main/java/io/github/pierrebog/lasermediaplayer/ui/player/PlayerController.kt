@@ -134,6 +134,9 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
     /* The eject button was pressed: the tray opens once libVLC has stopped. */
     private var ejectWhenStopped = false
     private var finished = false
+    /* startPlayback() was called: endPlayback() is owed, and only then - the
+     * drive counts its playbacks. */
+    private var driveTaken = false
     private var resumeApplied = false
     /* A DVD's resume time, waiting for its title to play - see applyResume(). */
     private var pendingResumeMs: Long? = null
@@ -181,6 +184,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
             return
         }
         app.drives.startPlayback(deviceName)
+        driveTaken = true
         if (hasDiscMenu && kind == DiscKind.BLURAY) main.postDelayed(menuWatch, MENU_WATCH_MS)
 
         val media = Media(app.engine.libVlc, mrl.toUri())
@@ -265,13 +269,17 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
     }
 
     fun togglePause() {
+        if (finished) return
         if (player.isPlaying) player.pause() else player.play()
     }
 
-    fun seekBy(deltaMs: Long) = seekTo(player.time + deltaMs)
+    fun seekBy(deltaMs: Long) {
+        if (finished) return
+        seekTo(player.time + deltaMs)
+    }
 
     fun seekTo(timeMs: Long) {
-        if (_state.value.inMenu) return
+        if (finished || _state.value.inMenu) return
         val length = player.length
         val target = if (length > 0) timeMs.coerceIn(0, length - 1) else timeMs.coerceAtLeast(0)
         player.setTime(target)
@@ -280,6 +288,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
 
     /** Sends a remote key to the disc's menu. */
     fun navigate(action: NavAction) {
+        if (finished) return
         player.navigate(
             when (action) {
                 NavAction.UP -> MediaPlayer.Navigate.Up
@@ -299,7 +308,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
      * VLC activates on the press. Taps beside the picture are dropped.
      */
     fun tapMenu(x: Float, y: Float) {
-        if (!_state.value.inMenu) return
+        if (finished || !_state.value.inMenu) return
         val view = videoView() ?: return
         val at = IntArray(2)
         view.getLocationInWindow(at)
@@ -329,7 +338,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
 
     /** Back to the disc's menu: the title marked as one. */
     fun openDiscMenu() {
-        if (!hasDiscMenu) return
+        if (finished || !hasDiscMenu) return
         val menu = player.titles?.indexOfFirst { it.isMenu } ?: -1
         if (menu >= 0) player.setTitle(menu)
     }
@@ -353,6 +362,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
      * the last: the vcd access crashes on it.
      */
     fun previousChapter() {
+        if (finished) return
         val ui = _state.value
         val chapter = ui.chapters.getOrNull(ui.chapter) ?: return
         if (ui.chapter == 0 || ui.timeMs - chapter.startMs > RESTART_THRESHOLD_MS)
@@ -362,6 +372,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
     }
 
     fun nextChapter() {
+        if (finished) return
         val ui = _state.value
         if (ui.chapter >= 0 && ui.chapter + 1 < ui.chapters.size) player.chapter = ui.chapter + 1
     }
@@ -369,6 +380,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
     /* ---- playlist (audio screen) ---------------------------------------- */
 
     fun playItem(index: Int) {
+        if (finished) return
         val ui = _state.value
         if (index !in ui.playlist.indices) return
         if (playlistByChapter) {
@@ -399,6 +411,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
 
     /** Applies and saves a new choice of tracks. */
     fun chooseTracks(choice: TrackChoice) {
+        if (finished) return
         val previous = _state.value.tracks
         val shown = _state.value.selected
         _state.update { it.copy(tracks = choice) }
@@ -548,7 +561,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         player.release()
         subItems?.forEach { it.release() }
         subItems = null
-        app.drives.endPlayback(deviceName, eject = ejectWhenStopped)
+        if (driveTaken) app.drives.endPlayback(deviceName, eject = ejectWhenStopped)
     }
 
     /* ---- chapters ---------------------------------------------------------- */

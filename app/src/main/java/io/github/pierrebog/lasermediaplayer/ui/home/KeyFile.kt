@@ -43,7 +43,7 @@ fun rememberKeyFilePicker(onLoading: () -> Unit, onResult: (AacsKeys.Result?) ->
     return {
         try {
             launcher.launch(arrayOf("*/*"))
-        } catch (e: ActivityNotFoundException) {
+        } catch (_: ActivityNotFoundException) {
             result(AacsKeys.Result.NO_PICKER)
         }
     }

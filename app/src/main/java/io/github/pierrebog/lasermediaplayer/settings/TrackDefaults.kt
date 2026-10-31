@@ -39,7 +39,7 @@ fun languageNameInUi(code: String): String {
  */
 fun languageLocale(code: String): Locale? = try {
     Locale.Builder().setLanguage(code).build()
-} catch (e: IllformedLocaleException) {
+} catch (_: IllformedLocaleException) {
     null
 }
 
@@ -103,7 +103,7 @@ private fun iso3(code: String): String? {
     if (lower in NORWEGIAN) return "nor"
     return try {
         languageLocale(lower)?.isO3Language?.takeIf { it.isNotEmpty() }
-    } catch (e: MissingResourceException) {
+    } catch (_: MissingResourceException) {
         null
     }
 }

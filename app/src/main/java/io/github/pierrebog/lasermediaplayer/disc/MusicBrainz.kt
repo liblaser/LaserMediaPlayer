@@ -22,6 +22,9 @@ import java.security.MessageDigest
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToLong
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /** What MusicBrainz says of a CD or a DVD-Audio, and where its cover may be. */
 data class MusicBrainzMatch(val album: AlbumInfo, val coverUrls: List<String>)
@@ -53,14 +56,14 @@ object MusicBrainz {
     /* A DVD-Audio's search: releases looked at, and their tolerance. */
     private const val CANDIDATES = 5
     /* MusicBrainz asks for a request a second at most. */
-    private const val REQUEST_GAP_MS = 1_100L
+    private val REQUEST_GAP = 1_100.milliseconds
     private const val RETRIES = 3
-    private const val RETRY_WAIT_MS = 2_000L
-    private const val MAX_RETRY_WAIT_MS = 10_000L
+    private val RETRY_WAIT = 2.seconds
+    private val MAX_RETRY_WAIT = 10.seconds
     private const val TRACK_TOLERANCE_MS = 5_000L
     private const val TRACK_TOLERANCE_PERCENT = 5
     /* MusicBrainz asks clients to identify themselves, with a contact. */
-    private val USER_AGENT = "LaserMediaPlayer/${BuildConfig.VERSION_NAME} ( ${Credits.SOURCE} )"
+    private const val USER_AGENT = "LaserMediaPlayer/${BuildConfig.VERSION_NAME} ( ${Credits.SOURCE} )"
 
     suspend fun lookUp(lengthsMs: List<Long>): MusicBrainzMatch? = withContext(Dispatchers.IO) {
         if (lengthsMs.isEmpty()) return@withContext null
@@ -68,7 +71,7 @@ object MusicBrainz {
         val offsets = sectors.runningFold(150L) { at, length -> at + length }
         val leadOut = offsets.last()
         val starts = offsets.dropLast(1)
-        val discId = discId(1, starts.size, leadOut, starts)
+        val discId = discId(starts.size, leadOut, starts)
         val toc = (listOf(1L, starts.size.toLong(), leadOut) + starts).joinToString("+")
         val url = "$SERVER/discid/$discId?toc=$toc&fmt=json&cdstubs=no" +
                   "&inc=artist-credits+recordings+release-groups"
@@ -107,12 +110,13 @@ object MusicBrainz {
 
     /**
      * The MusicBrainz disc ID, as libdiscid computes it: SHA-1 of the first
-     * and last track numbers and the 100 offsets (lead-out first), in
-     * upper-case hexadecimal, in base 64 with "._-" for "+/=".
+     * and last track numbers - the first always 1 here - and the 100 offsets
+     * (lead-out first), in upper-case hexadecimal, in base 64 with "._-" for
+     * "+/=".
      */
-    private fun discId(first: Int, last: Int, leadOut: Long, starts: List<Long>): String {
+    private fun discId(last: Int, leadOut: Long, starts: List<Long>): String {
         val text = StringBuilder()
-            .append("%02X".format(first))
+            .append("01")
             .append("%02X".format(last))
             .append("%08X".format(leadOut))
         for (i in 0 until 99) text.append("%08X".format(starts.getOrElse(i) { 0L }))
@@ -272,7 +276,7 @@ object MusicBrainz {
         return text.ifEmpty { null }
     }
 
-    /* Every request, however many lookups run, is spaced by [REQUEST_GAP_MS]
+    /* Every request, however many lookups run, is spaced by [REQUEST_GAP]
      * from the one before. */
     private val gate = Mutex()
     private var lastRequest = 0L
@@ -286,9 +290,9 @@ object MusicBrainz {
      */
     private suspend fun get(url: String): String? = gate.withLock {
         repeat(RETRIES + 1) { attempt ->
-            delay(lastRequest + REQUEST_GAP_MS - SystemClock.elapsedRealtime())
+            delay(REQUEST_GAP - (SystemClock.elapsedRealtime() - lastRequest).milliseconds)
             val connection = open(url, json = true)
-            var retryAfterMs = 0L
+            val retryAfter: Duration
             try {
                 val code = connection.responseCode
                 lastRequest = SystemClock.elapsedRealtime()
@@ -298,8 +302,8 @@ object MusicBrainz {
                     /* No release for this disc. */
                     HttpURLConnection.HTTP_NOT_FOUND -> return@withLock null
                     HttpURLConnection.HTTP_UNAVAILABLE -> {
-                        retryAfterMs = (connection.getHeaderField("Retry-After")?.trim()?.toLongOrNull()
-                            ?.times(1000) ?: (RETRY_WAIT_MS shl attempt)).coerceIn(RETRY_WAIT_MS, MAX_RETRY_WAIT_MS)
+                        retryAfter = (connection.getHeaderField("Retry-After")?.trim()?.toLongOrNull()
+                            ?.seconds ?: (RETRY_WAIT * (1 shl attempt))).coerceIn(RETRY_WAIT, MAX_RETRY_WAIT)
                         Log.w(LASER_TAG, "MusicBrainz: HTTP 503, attempt ${attempt + 1}: $url")
                     }
                     else -> {
@@ -310,7 +314,7 @@ object MusicBrainz {
             } finally {
                 connection.disconnect()
             }
-            delay(retryAfterMs)
+            delay(retryAfter)
         }
         null
     }

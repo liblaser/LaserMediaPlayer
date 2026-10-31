@@ -85,6 +85,7 @@ import io.github.pierrebog.lasermediaplayer.ui.theme.LaserType
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.seconds
 import org.videolan.libvlc.util.VLCVideoLayout
 
 private enum class Sheet { AUDIO, SUBTITLES }
@@ -135,7 +136,7 @@ fun VideoPlayer(
     /* Controls hide themselves while playing, in the overlay only. */
     LaunchedEffect(controls, ui.playing, activity, sheet, overlay) {
         if (overlay && controls && ui.playing && sheet == null) {
-            delay(CONTROLS_TIMEOUT_MS)
+            delay(CONTROLS_TIMEOUT)
             controls = false
         }
     }
@@ -600,7 +601,7 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 }
 
 private const val SEEK_STEP_MS = 10_000L
-private const val CONTROLS_TIMEOUT_MS = 4_000L
+private val CONTROLS_TIMEOUT = 4.seconds
 /* Shapes closer than this are the same: a DVD's 720 pixels hold a few
  * columns of margin. */
 private const val FILL_THRESHOLD = 0.03f

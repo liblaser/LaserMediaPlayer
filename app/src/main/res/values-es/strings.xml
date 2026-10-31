@@ -13,6 +13,8 @@
     <string name="state_no_drive_hint">Conecta una unidad de CD, DVD o Blu-ray USB. En un teléfono, usa un adaptador OTG y asegúrate de que la unidad tenga alimentación.</string>
     <string name="state_no_disc">Ningún disco legible</string>
     <string name="state_no_disc_hint">Inserta un CD, un DVD o un Blu-ray.</string>
+    <string name="state_tray_open">Bandeja abierta</string>
+    <string name="state_tray_open_hint">Inserta un disco y cierra la bandeja.</string>
     <string name="state_not_responding">Disco no identificado</string>
     <string name="state_not_responding_hint">La unidad no respondió a tiempo.</string>
     <string name="state_permission">Se ha denegado el acceso a la unidad</string>
@@ -28,6 +30,7 @@
     <string name="drive_empty">Vacía</string>
     <string name="drive_identifying">Identificando…</string>
     <string name="drive_not_responding">No responde</string>
+    <string name="drive_tray_open">Bandeja abierta</string>
 
     <!-- Play buttons -->
     <string name="play">Reproducir</string>

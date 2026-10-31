@@ -90,7 +90,7 @@ object AacsKeys {
             if (!part.renameTo(copy)) throw IOException("rename to $copy failed")
             Log.d(LASER_TAG, "KEYDB.cfg loaded, ${copy.length()} bytes")
             return Result.LOADED
-        } catch (e: TooLarge) {
+        } catch (_: TooLarge) {
             Log.w(LASER_TAG, "not a key database, too large: $uri")
             return Result.NOT_KEYDB
         } catch (e: Exception) {
@@ -140,7 +140,7 @@ object AacsKeys {
         context.contentResolver.query(uri,
             arrayOf(DocumentsContract.Document.COLUMN_LAST_MODIFIED), null, null, null)
             ?.use { if (it.moveToFirst() && !it.isNull(0)) it.getLong(0) else null }
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         null
     }
 

@@ -152,7 +152,7 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
                                          o.optString("year").ifEmpty { null },
                                          File(dir, "$id.jpg").takeIf { it.isFile }, language,
                                          o.optString("original").ifEmpty { null }))
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -160,7 +160,7 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
     /** The address of the poster of the film kept as [id], if it has one. */
     private fun storedPosterUrl(id: String): String? = try {
         JSONObject(File(dir, "$id.json").readText()).optString("poster").ifEmpty { null }
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         null
     }
 
@@ -485,7 +485,7 @@ object Tmdb {
         } finally {
             connection.disconnect()
         }
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         null
     }
 

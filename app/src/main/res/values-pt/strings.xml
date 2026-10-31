@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="settings">Configurações</string>
     <string name="refresh">Atualizar</string>
@@ -13,6 +13,8 @@
     <string name="state_no_drive_hint">Conecte uma unidade de CD, DVD ou Blu-ray USB. Em um celular, use um adaptador OTG e verifique se a unidade está alimentada.</string>
     <string name="state_no_disc">Nenhum disco legível</string>
     <string name="state_no_disc_hint">Insira um CD, um DVD ou um Blu-ray.</string>
+    <string name="state_tray_open">Bandeja aberta</string>
+    <string name="state_tray_open_hint">Insira um disco e feche a bandeja.</string>
     <string name="state_not_responding">Disco não identificado</string>
     <string name="state_not_responding_hint">A unidade não respondeu a tempo.</string>
     <string name="state_permission">O acesso à unidade foi negado</string>
@@ -28,6 +30,7 @@
     <string name="drive_empty">Vazia</string>
     <string name="drive_identifying">Identificando…</string>
     <string name="drive_not_responding">Não responde</string>
+    <string name="drive_tray_open">Bandeja aberta</string>
 
     <!-- Play buttons -->
     <string name="play">Reproduzir</string>

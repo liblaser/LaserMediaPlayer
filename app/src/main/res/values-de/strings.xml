@@ -13,6 +13,8 @@
     <string name="state_no_drive_hint">Schließe ein USB-CD-, DVD- oder Blu-ray-Laufwerk an. Verwende am Smartphone einen OTG-Adapter und achte darauf, dass das Laufwerk mit Strom versorgt wird.</string>
     <string name="state_no_disc">Keine lesbare Disc</string>
     <string name="state_no_disc_hint">Lege eine CD, DVD oder Blu-ray ein.</string>
+    <string name="state_tray_open">Schublade offen</string>
+    <string name="state_tray_open_hint">Lege eine Disc ein und schließe die Schublade.</string>
     <string name="state_not_responding">Disc nicht erkannt</string>
     <string name="state_not_responding_hint">Das Laufwerk hat nicht rechtzeitig geantwortet.</string>
     <string name="state_permission">Zugriff auf das Laufwerk verweigert</string>
@@ -28,6 +30,7 @@
     <string name="drive_empty">Leer</string>
     <string name="drive_identifying">Wird erkannt…</string>
     <string name="drive_not_responding">Antwortet nicht</string>
+    <string name="drive_tray_open">Schublade offen</string>
 
     <!-- Play buttons -->
     <string name="play">Abspielen</string>

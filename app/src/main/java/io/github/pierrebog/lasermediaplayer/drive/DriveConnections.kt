@@ -19,7 +19,9 @@ import io.github.pierrebog.lasermediaplayer.LASER_TAG
 object DriveConnections {
 
     private val connections = HashMap<String, UsbDeviceConnection>()
-    private val playing = HashSet<String>()
+    /* Playbacks in progress, by drive: a count, since a new one may start
+     * while the previous one is still stopping (see PlayerController.close). */
+    private val playing = HashMap<String, Int>()
 
     /**
      * [device]'s connection, opened if it has none. Permission must have been
@@ -42,12 +44,15 @@ object DriveConnections {
     @Synchronized
     fun fd(deviceName: String): Int? = connections[deviceName]?.fileDescriptor
 
-    /** Playback runs on the drive: classification leaves it alone. */
+    /** A playback starts on the drive ([on]), or one has stopped: while any
+     * runs, classification leaves the drive alone. */
     @Synchronized
     fun setPlaying(deviceName: String, on: Boolean) {
-        if (on) playing += deviceName else playing -= deviceName
+        val count = (playing[deviceName] ?: 0) + if (on) 1 else -1
+        if (count > 0) playing[deviceName] = count else playing.remove(deviceName)
     }
 
+    /** At least one playback runs on the drive. */
     @Synchronized
     fun isPlaying(deviceName: String): Boolean = deviceName in playing
 
@@ -58,7 +63,7 @@ object DriveConnections {
      */
     fun close(deviceName: String) {
         val connection = synchronized(this) {
-            playing -= deviceName
+            playing.remove(deviceName)
             connections.remove(deviceName)
         } ?: return
         Log.d(LASER_TAG, "closing connection for $deviceName (fd=${connection.fileDescriptor})")

@@ -19,6 +19,7 @@ import java.io.File
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.resume
+import kotlin.time.Duration.Companion.milliseconds
 
 /*
  * Finding the USB devices that may be optical drives, without disturbing the
@@ -67,7 +68,7 @@ private val USB_STORAGE_DRIVERS = setOf("usb-storage", "uas")
 
 /* How long a device may stay PROBING before INQUIRY decides after all. */
 private const val PROBE_GRACE_MS = 5000L
-private const val PROBE_POLL_MS = 250L
+private val PROBE_POLL_INTERVAL = 250.milliseconds
 
 object UsbDrives {
 
@@ -114,7 +115,7 @@ object UsbDrives {
         while (true) {
             val names = probingNames()
             if (names.isEmpty()) return@withContext
-            delay(PROBE_POLL_MS)
+            delay(PROBE_POLL_INTERVAL)
             val devices = manager.deviceList
             if (names.any { name -> devices[name]?.let { sysfsKind(it) != SysfsKind.PROBING } ?: true })
                 return@withContext

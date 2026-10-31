@@ -14,6 +14,8 @@
     <string name="state_no_drive_hint">Connect a USB CD, DVD or Blu-ray drive. On a phone, use an OTG adapter and make sure the drive is powered.</string>
     <string name="state_no_disc">No readable disc</string>
     <string name="state_no_disc_hint">Insert a CD, a DVD or a Blu-ray.</string>
+    <string name="state_tray_open">Tray open</string>
+    <string name="state_tray_open_hint">Insert a disc and close the tray.</string>
     <string name="state_not_responding">Disc not identified</string>
     <string name="state_not_responding_hint">The drive did not respond in time.</string>
     <string name="state_permission">Access to the drive was refused</string>
@@ -29,6 +31,7 @@
     <string name="drive_empty">Empty</string>
     <string name="drive_identifying">Identifying…</string>
     <string name="drive_not_responding">Not responding</string>
+    <string name="drive_tray_open">Tray open</string>
 
     <!-- Play buttons -->
     <string name="play">Play</string>

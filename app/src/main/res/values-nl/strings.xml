@@ -13,6 +13,8 @@
     <string name="state_no_drive_hint">Sluit een USB-cd-, dvd- of Blu-ray-station aan. Gebruik op een telefoon een OTG-adapter en zorg dat het station stroom krijgt.</string>
     <string name="state_no_disc">Geen leesbare disc</string>
     <string name="state_no_disc_hint">Plaats een cd, dvd of Blu-ray.</string>
+    <string name="state_tray_open">Lade open</string>
+    <string name="state_tray_open_hint">Plaats een disc en sluit de lade.</string>
     <string name="state_not_responding">Disc niet herkend</string>
     <string name="state_not_responding_hint">Het station reageerde niet op tijd.</string>
     <string name="state_permission">Toegang tot het station geweigerd</string>
@@ -28,6 +30,7 @@
     <string name="drive_empty">Leeg</string>
     <string name="drive_identifying">Herkennen…</string>
     <string name="drive_not_responding">Reageert niet</string>
+    <string name="drive_tray_open">Lade open</string>
 
     <!-- Play buttons -->
     <string name="play">Afspelen</string>

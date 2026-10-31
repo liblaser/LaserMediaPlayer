@@ -32,7 +32,7 @@ object NativeEnvironment {
     fun libaacsProviderInstalled(context: Context): Boolean = try {
         context.packageManager.getApplicationInfo(LIBAACS_PACKAGE, 0)
         true
-    } catch (e: PackageManager.NameNotFoundException) {
+    } catch (_: PackageManager.NameNotFoundException) {
         false
     }
 
@@ -72,7 +72,8 @@ object NativeEnvironment {
      * DVDREAD_NOKEYS: skips libdvdread's initAllCSSKeys(), which opens every
      * VOB at startup - seconds of seeking. Keys are then asked for on demand.
      *
-     * DVDCSS_VERBOSE=1, errors only, in debug builds.
+     * DVDCSS_VERBOSE=2 in debug builds: errors and debug messages - how
+     * libdvdcss authenticates and which sectors it reads, logged by VLC.
      */
     private fun configureLibdvdcss(context: Context) {
         val cache = File(context.cacheDir, "dvdcss")
@@ -85,7 +86,7 @@ object NativeEnvironment {
         Os.setenv("DVDREAD_NOKEYS", "1", true)
 
         if (BuildConfig.DEBUG)
-            Os.setenv("DVDCSS_VERBOSE", "1", true)
+            Os.setenv("DVDCSS_VERBOSE", "2", true)
     }
 
     /**
@@ -96,7 +97,7 @@ object NativeEnvironment {
     private fun configureLibaacs(context: Context) {
         val apk = try {
             context.packageManager.getApplicationInfo(LIBAACS_PACKAGE, 0).sourceDir
-        } catch (e: PackageManager.NameNotFoundException) {
+        } catch (_: PackageManager.NameNotFoundException) {
             Log.d(LASER_TAG, "$LIBAACS_PACKAGE not installed, AACS discs will not play")
             return
         }

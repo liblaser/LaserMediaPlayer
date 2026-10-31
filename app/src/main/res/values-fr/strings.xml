@@ -11,6 +11,8 @@
     <string name="state_no_drive_hint">Branchez un lecteur CD, DVD ou Blu-ray USB. Sur un téléphone, utilisez un adaptateur OTG et vérifiez que le lecteur est bien alimenté.</string>
     <string name="state_no_disc">Aucun disque lisible</string>
     <string name="state_no_disc_hint">Insérez un CD, un DVD ou un Blu-ray.</string>
+    <string name="state_tray_open">Tiroir ouvert</string>
+    <string name="state_tray_open_hint">Insérez un disque et fermez le tiroir.</string>
     <string name="state_not_responding">Disque non identifié</string>
     <string name="state_not_responding_hint">Le lecteur n\'a pas répondu à temps.</string>
     <string name="state_permission">L\'accès au lecteur a été refusé</string>
@@ -25,6 +27,7 @@
     <string name="drive_empty">Vide</string>
     <string name="drive_identifying">Identification…</string>
     <string name="drive_not_responding">Ne répond pas</string>
+    <string name="drive_tray_open">Tiroir ouvert</string>
 
     <string name="play">Lire</string>
     <string name="resume_at">Reprendre à %1$s</string>
