@@ -128,6 +128,11 @@ data class DiscInfo(
     val discId: String? = null,
     /** The main title's length, from laser.c; 0 if unknown. */
     val mainLengthMs: Long = 0,
+    /** A DVD's main title, from laser.c: its number in the disc's title
+     * table, from 1, as dvdread numbers its titles; null if unknown. Where
+     * playback without the menus starts, rather than the disc's first title -
+     * a warning, a trailer, or on some discs a decoy. */
+    val mainTitle: Int? = null,
     /** A Blu-ray's AACS protection, from laser.c; null if unknown. */
     val aacs: Boolean? = null,
     /** A DVD's versions of the film, the shortest first: none, or two or
@@ -166,10 +171,6 @@ data class DiscInfo(
     val kind: DiscKind
         get() = if (rows.any { it.kind == DiscKind.DVD_AUDIO }) DiscKind.DVD_AUDIO
                 else rows.first().kind
-
-    val hasVideoPart: Boolean
-        get() = rows.any { it.kind == DiscKind.DVD_VIDEO || it.kind == DiscKind.BLURAY ||
-                           it.kind == DiscKind.VIDEO_CD }
 
     /**
      * Key for what is remembered about the disc - resume position, chosen
@@ -237,8 +238,9 @@ object TrackLists {
 
     /** The versions to choose from: two or more of different lengths, else
      * none. Titles of about one length - within VERSION_SAME_PERCENT of each
-     * other - are one cut localised for several languages: one version, the
-     * lowest-numbered title, holding them as its variants. */
+     * other - and different tracks are one cut localised for several
+     * languages: one version, the lowest-numbered title, holding them as its
+     * variants. */
     fun parseVersions(value: String?): List<VersionInfo> {
         val cuts = parseCuts(value)
         return if (cuts.size >= 2) cuts else emptyList()

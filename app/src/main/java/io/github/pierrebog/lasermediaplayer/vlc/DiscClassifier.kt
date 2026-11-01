@@ -170,6 +170,7 @@ class DiscClassifier(private val engine: VlcEngine) {
             Log.d(LASER_TAG, "row ${media.uri}: audio=${media.getMetaExtra(TrackLists.AUDIO_META)
                 ?.replace('\n', '|')} spu=${media.getMetaExtra(TrackLists.SPU_META)?.replace('\n', '|')}" +
                 " id=${media.getMetaExtra(DISC_ID_META)} length=${media.getMetaExtra(MAIN_LENGTH_META)}" +
+                " main=${media.getMetaExtra(MAIN_TITLE_META)}" +
                 " dvda=${media.getMetaExtra(DVDA_TRACKS_META)?.replace('\n', '|')}" +
                 " aacs=${media.getMetaExtra(AACS_META)}" +
                 " versions=${media.getMetaExtra(TrackLists.VERSIONS_META)?.replace('\n', '|')}")
@@ -189,6 +190,8 @@ class DiscClassifier(private val engine: VlcEngine) {
             discId = medias.firstNotNullOfOrNull { it.getMetaExtra(DISC_ID_META) },
             mainLengthMs = medias.firstNotNullOfOrNull { it.getMetaExtra(MAIN_LENGTH_META) }
                 ?.toLongOrNull() ?: 0,
+            mainTitle = medias.firstNotNullOfOrNull { it.getMetaExtra(MAIN_TITLE_META) }
+                ?.toIntOrNull()?.takeIf { it >= 1 },
             dvdaTracks = medias.firstNotNullOfOrNull { it.getMetaExtra(DVDA_TRACKS_META) }
                 .orEmpty().lineSequence().mapNotNull { it.trim().toLongOrNull() }.toList(),
             aacs = when (medias.firstNotNullOfOrNull { it.getMetaExtra(AACS_META) }) {
@@ -210,6 +213,9 @@ class DiscClassifier(private val engine: VlcEngine) {
          * the main title's length in milliseconds. */
         const val DISC_ID_META = "laser-disc-id"
         const val MAIN_LENGTH_META = "laser-main-length"
+        /* Set by laser.c on a DVD's video rows: the main title's number,
+         * from 1. */
+        const val MAIN_TITLE_META = "laser-main-title"
         /* Set by laser.c on a DVD-Audio row: its tracks' lengths in
          * milliseconds, one per line. */
         const val DVDA_TRACKS_META = "laser-dvda-tracks"

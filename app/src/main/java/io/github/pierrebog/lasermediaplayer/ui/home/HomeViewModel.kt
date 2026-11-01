@@ -34,8 +34,8 @@ data class PlaybackRequest(
     /** Where to start, or null for the start (or the menus). */
     val resume: ResumePoint?,
     val tracks: TrackChoice,
-    /** The libVLC title to start, from 0: the version chosen, played
-     * without the menus. Null for the demuxer's own start. */
+    /** The libVLC title to start, from 0: the version chosen, or the main
+     * title, played without the menus. Null for the demuxer's own start. */
     val startTitle: Int? = null,
 )
 
@@ -189,15 +189,15 @@ class HomeViewModel(private val app: LaserApp) : ViewModel() {
             PlayAction.VIDEO_PART -> Triple(rows.firstOrNull { it.kind == DiscKind.DVD_VIDEO }, emptyList(), null)
         }
         row ?: return null
-        /* Without the menus, the version chosen: dvdread starts at the
-         * disc's first title. Of a cut localised for several languages, the
-         * title in the audio track's language. A resumed point has its own
-         * title. */
+        /* Without the menus, the version chosen, else the main title:
+         * dvdread starts at the disc's first title - a warning, a trailer,
+         * or a decoy. Of a cut localised for several languages, the title in
+         * the audio track's language. A resumed point has its own title. */
         val variant = pickVariant(state.version?.variants ?: disc.variants,
                                   state.tracks.audioId, state.tracks.subtitleId)
-        val startTitle = (variant ?: state.version)
+        val startTitle = ((variant ?: state.version)?.title ?: disc.mainTitle)
             ?.takeIf { resume == null && row.kind == DiscKind.DVD_VIDEO && row.mode == PlayMode.NO_MENUS }
-            ?.let { it.title - 1 }
+            ?.let { it - 1 }
         return PlaybackRequest(disc, row, options, resume, state.tracks, startTitle)
     }
 
