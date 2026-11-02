@@ -29,7 +29,6 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -121,7 +120,7 @@ fun AudioPlayer(
                             artist?.let { OneLine(it, 24.sp, LaserColors.Muted) }
                         }
                     ItemProgress(ui, controller, 17.sp)
-                    Transport(ui, controller, small = 56.dp, big = 72.dp, playFocus = playFocus)
+                    TrackTransport(ui, controller, small = 56.dp, big = 72.dp, playFocus = playFocus)
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     ListHeader(ui, 17.sp)
@@ -143,7 +142,7 @@ fun AudioPlayer(
                             modifier = Modifier.weight(1f))
                 NowPlaying(ui, 15.sp)
                 ItemProgress(ui, controller, 13.sp)
-                Transport(ui, controller, small = 48.dp, big = 60.dp, playFocus = playFocus)
+                TrackTransport(ui, controller, small = 48.dp, big = 60.dp, playFocus = playFocus)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 ListHeader(ui, 14.sp)
@@ -171,7 +170,7 @@ fun AudioPlayer(
             ) {
                 NowPlaying(ui, 16.sp)
                 ItemProgress(ui, controller, 13.sp)
-                Transport(ui, controller, small = 52.dp, big = 64.dp, playFocus = playFocus)
+                TrackTransport(ui, controller, small = 52.dp, big = 64.dp, playFocus = playFocus)
             }
         }
     }
@@ -282,24 +281,20 @@ private fun ItemProgress(ui: PlayerUi, controller: PlayerController, size: TextU
 }
 
 @Composable
-private fun Transport(ui: PlayerUi, controller: PlayerController, small: Dp, big: Dp,
-                      playFocus: FocusRequester) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically) {
-        /* Previous: faded at the very start of the first track, where it has
-         * nothing to do; further in, it goes back to the start. Next: faded
-         * on the last track. */
-        CircleButton(R.drawable.ic_skip_previous, stringResource(R.string.previous_track), small,
-                     onClick = controller::previousItem,
-                     enabled = ui.current > 0 || ui.itemTimeMs > RESTART_THRESHOLD_MS)
-        CircleButton(if (ui.playing) R.drawable.ic_pause else R.drawable.ic_play,
-                     stringResource(if (ui.playing) R.string.player_pause else R.string.player_play),
-                     big, onClick = controller::togglePause, primary = true,
-                     modifier = Modifier.focusRequester(playFocus))
-        CircleButton(R.drawable.ic_skip_next, stringResource(R.string.next_track), small,
-                     onClick = controller::nextItem,
-                     enabled = ui.current >= 0 && ui.current + 1 < ui.playlist.size)
-    }
+private fun TrackTransport(ui: PlayerUi, controller: PlayerController, small: Dp, big: Dp,
+                           playFocus: FocusRequester) {
+    /* Previous: faded at the very start of the first track, where it has
+     * nothing to do; further in, it goes back to the start. Next: faded on
+     * the last track. */
+    Transport(
+        ui.playing, controller::togglePause,
+        previous = Skip(stringResource(R.string.previous_track),
+                        ui.current > 0 || ui.itemTimeMs > RESTART_THRESHOLD_MS, controller::previousItem),
+        next = Skip(stringResource(R.string.next_track),
+                    ui.current >= 0 && ui.current + 1 < ui.playlist.size, controller::nextItem),
+        small, big, Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally), playFocus,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 /** The tracks, the one playing marked; choosing one plays it. */

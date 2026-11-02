@@ -20,15 +20,17 @@ private val TRACK_LANGUAGES = listOf(
 /** [TRACK_LANGUAGES] in the alphabetical order of their names in the
  * interface's language. */
 fun trackLanguages(): List<String> {
-    val ui = interfaceLocale()
-    val collator = Collator.getInstance(ui)
-    return TRACK_LANGUAGES.sortedWith(compareBy(collator) { languageNameInUi(it) })
+    val collator = Collator.getInstance(interfaceLocale())
+    return TRACK_LANGUAGES.sortedWith(compareBy(collator) { languageName(it) ?: it })
 }
 
-/** [code]'s name in the interface's language: "Allemand", "Japonais". */
-fun languageNameInUi(code: String): String {
+/** [code]'s name in the interface's language, capitalized: "Allemand",
+ * "Japonais"; null if it names no language Android knows. */
+fun languageName(code: String): String? {
+    if (code.isEmpty()) return null
     val ui = interfaceLocale()
-    val name = languageLocale(code)?.getDisplayLanguage(ui) ?: code
+    val name = languageLocale(code)?.getDisplayLanguage(ui) ?: return null
+    if (name.isEmpty() || name.equals(code, ignoreCase = true)) return null
     return name.replaceFirstChar { it.titlecase(ui) }
 }
 
@@ -87,8 +89,9 @@ fun defaultTracks(disc: DiscInfo, defaults: PlaybackDefaults): TrackChoice {
 private const val FORCED = 9
 private val COMMENTARY = 13..15
 
-/** Two language codes - ISO 639-1, or 639-2 as a Blu-ray writes them - for
- * the same language. */
+/** Two languages that are one: codes - ISO 639-1, or 639-2 as a Blu-ray
+ * writes them, bibliographic or not - or names, as libVLC may give a track's
+ * language: "ar", "ara", "Arabic" and "arabe". */
 fun sameLanguage(a: String, b: String): Boolean {
     if (a.isEmpty() || b.isEmpty()) return false
     if (a.equals(b, ignoreCase = true)) return true
@@ -97,12 +100,27 @@ fun sameLanguage(a: String, b: String): Boolean {
 }
 
 private fun iso3(code: String): String? {
+    if (code.length > 3) return iso3OfName(code)
     val lower = code.lowercase(Locale.ROOT)
     BIBLIOGRAPHIC[lower]?.let { return it }
     /* Norwegian: discs write no, nb (Bokmål), sometimes nn (Nynorsk). */
     if (lower in NORWEGIAN) return "nor"
     return try {
         languageLocale(lower)?.isO3Language?.takeIf { it.isNotEmpty() }
+    } catch (_: MissingResourceException) {
+        null
+    }
+}
+
+/* A language's name, in English or in the interface's language. */
+private fun iso3OfName(name: String): String? {
+    val ui = interfaceLocale()
+    val locale = Locale.getAvailableLocales().firstOrNull {
+        it.getDisplayLanguage(Locale.ENGLISH).equals(name, ignoreCase = true) ||
+            it.getDisplayLanguage(ui).equals(name, ignoreCase = true)
+    } ?: return null
+    return try {
+        locale.isO3Language.takeIf { it.isNotEmpty() }
     } catch (_: MissingResourceException) {
         null
     }

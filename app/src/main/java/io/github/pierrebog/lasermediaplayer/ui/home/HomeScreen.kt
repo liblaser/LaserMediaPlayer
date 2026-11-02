@@ -190,17 +190,10 @@ fun HomeScreen(vm: HomeViewModel, onPlay: (PlaybackRequest) -> Unit, onOptions: 
         }
 
         val disc = (state.selected?.status as? DriveStatus.Ready)?.disc?.withTracksOf(state.version)
-        if (disc != null) when (sheet) {
-            Sheet.AUDIO -> if (disc.kind == DiscKind.VIDEO_CD)
-                ChannelSheet(state.tracks, form,
-                    onPick = { vm.chooseTracks(disc, state.tracks.copy(channel = it)); sheet = null },
-                    onDismiss = { sheet = null })
-            else
-                AudioSheet(disc, state.tracks, form,
-                    onPick = { vm.chooseTracks(disc, state.tracks.copy(audioId = it)); sheet = null },
-                    onDismiss = { sheet = null })
-            Sheet.SUBTITLES -> SubtitleSheet(disc, state.tracks, form,
-                onPick = { vm.chooseTracks(disc, state.tracks.copy(subtitleId = it, subtitlesOff = it == null)); sheet = null },
+        if (disc != null) when (val open = sheet) {
+            Sheet.AUDIO, Sheet.SUBTITLES -> TrackSheets(disc, state.tracks,
+                if (open == Sheet.AUDIO) TrackSheetKind.AUDIO else TrackSheetKind.SUBTITLES, form,
+                onChoice = { vm.chooseTracks(disc, it); sheet = null },
                 onDismiss = { sheet = null })
             Sheet.VERSION -> VersionSheet(disc, state.version, form,
                 onPick = { vm.chooseVersion(disc, it); sheet = null },
@@ -518,28 +511,14 @@ private fun TrackRow(
     onAudio: () -> Unit,
     onSubtitles: () -> Unit,
 ) {
-    if (disc.kind == DiscKind.VIDEO_CD) {
-        val text = channelLabel(choice.channel)
-        Row {
-            TrackButton(R.drawable.ic_audio, text,
-                        stringResource(R.string.audio_track) + ", " + text,
-                        metrics, onAudio, Modifier.weight(1f))
-        }
-        return
-    }
-    if (disc.audioTracks.isEmpty() && disc.subtitleTracks.isEmpty()) return
-    /* A new disc plays its first track, as the disc orders them. */
-    val audioIndex = disc.audioTracks.indexOfFirst { it.id == choice.audioId }.coerceAtLeast(0)
-    val subIndex = disc.subtitleTracks.indexOfFirst { it.id == choice.subtitleId }
-    val audioText = audioTrackShorts(disc.audioTracks).getOrNull(audioIndex).orEmpty()
-    val subText = if (subIndex >= 0) subtitleLabels(disc.subtitleTracks)[subIndex]
-                  else stringResource(R.string.subtitles_off)
+    val (audioText, subText) = trackButtonTexts(disc, choice)
+    if (audioText == null && subText == null) return
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (disc.audioTracks.isNotEmpty())
+        if (audioText != null)
             TrackButton(R.drawable.ic_audio, audioText,
                         stringResource(R.string.audio_track) + ", " + audioText,
                         metrics, onAudio, Modifier.weight(1f))
-        if (disc.subtitleTracks.isNotEmpty())
+        if (subText != null)
             TrackButton(R.drawable.ic_subtitles, subText,
                         stringResource(R.string.subtitles) + ", " + subText,
                         metrics, onSubtitles, Modifier.weight(1f))

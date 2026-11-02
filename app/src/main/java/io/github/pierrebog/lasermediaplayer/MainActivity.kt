@@ -17,7 +17,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import io.github.pierrebog.lasermediaplayer.disc.DiscKind
 import io.github.pierrebog.lasermediaplayer.settings.ThemeMode
 import io.github.pierrebog.lasermediaplayer.ui.home.HomeScreen
 import io.github.pierrebog.lasermediaplayer.ui.home.HomeViewModel
@@ -57,16 +56,13 @@ class MainActivity : AppCompatActivity() {
 
             /* The video player is always dark, so are its bars. */
             val video = playing?.let {
-                it.row.kind != DiscKind.CD_AUDIO && it.row.kind != DiscKind.DVD_AUDIO
+                !it.row.kind.isAudio
             } ?: false
             val darkBars = dark || video
             DisposableEffect(darkBars) {
-                enableEdgeToEdge(
-                    statusBarStyle = if (darkBars) SystemBarStyle.dark(Color.TRANSPARENT)
-                                     else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
-                    navigationBarStyle = if (darkBars) SystemBarStyle.dark(Color.TRANSPARENT)
-                                         else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
-                )
+                val bars = if (darkBars) SystemBarStyle.dark(Color.TRANSPARENT)
+                           else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+                enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
                 onDispose {}
             }
 

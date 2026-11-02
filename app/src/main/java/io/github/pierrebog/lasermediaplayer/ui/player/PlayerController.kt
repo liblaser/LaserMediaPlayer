@@ -20,7 +20,7 @@ import io.github.pierrebog.lasermediaplayer.resume.AudioChannel
 import io.github.pierrebog.lasermediaplayer.resume.ResumePoint
 import io.github.pierrebog.lasermediaplayer.resume.TrackChoice
 import io.github.pierrebog.lasermediaplayer.settings.interfaceLocale
-import io.github.pierrebog.lasermediaplayer.settings.languageLocale
+import io.github.pierrebog.lasermediaplayer.settings.sameLanguage
 import io.github.pierrebog.lasermediaplayer.ui.home.PlaybackRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,8 +30,6 @@ import org.videolan.libvlc.Media
 import org.videolan.libvlc.MediaPlayer
 import org.videolan.libvlc.interfaces.IMedia
 import org.videolan.libvlc.util.VLCVideoLayout
-import java.util.Locale
-import java.util.MissingResourceException
 import kotlin.math.roundToInt
 
 /** A chapter of the title playing. [name] is null on a DVD, which has none. */
@@ -125,7 +123,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
 
     /** The disc's menu can be called up: a DVD or a Blu-ray played with its
      * menus. */
-    val hasDiscMenu = (kind == DiscKind.DVD_VIDEO || kind == DiscKind.BLURAY) &&
+    val hasDiscMenu = kind.isFilm &&
         request.row.mode == PlayMode.MENUS && ":no-bluray-menu" !in request.options
 
     private var started = false
@@ -213,7 +211,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
             media.setHWDecoderEnabled(hw, false)
             if (!hw) media.addOption(":codec=avcodec,all")
         }
-        player.setMedia(media)
+        player.media = media
         media.release()
         mediaSet = true
 
@@ -258,8 +256,8 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
 
     private fun applyScale() {
         if (layout == null || finished) return
-        player.setVideoScale(if (cropped) MediaPlayer.ScaleType.SURFACE_FIT_SCREEN
-                             else MediaPlayer.ScaleType.SURFACE_BEST_FIT)
+        player.videoScale = if (cropped) MediaPlayer.ScaleType.SURFACE_FIT_SCREEN
+                            else MediaPlayer.ScaleType.SURFACE_BEST_FIT
     }
 
     fun detach(layout: VLCVideoLayout) {
@@ -282,7 +280,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         if (finished || _state.value.inMenu) return
         val length = player.length
         val target = if (length > 0) timeMs.coerceIn(0, length - 1) else timeMs.coerceAtLeast(0)
-        player.setTime(target)
+        player.time = target
         _state.update { it.copy(timeMs = target) }
     }
 
@@ -340,7 +338,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
     fun openDiscMenu() {
         if (finished || !hasDiscMenu) return
         val menu = player.titles?.indexOfFirst { it.isMenu } ?: -1
-        if (menu >= 0) player.setTitle(menu)
+        if (menu >= 0) player.title = menu
     }
 
     /** The picture's shape, from the video track playing: a DVD's menus
@@ -462,7 +460,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         saveResumePoint()
         /* The tracks that played are the disc's tracks next time, and what
          * the disc screen shows. */
-        if (started && !_state.value.inMenu && (kind == DiscKind.DVD_VIDEO || kind == DiscKind.BLURAY))
+        if (started && !_state.value.inMenu && kind.isFilm)
             app.resume.saveTrackChoice(request.disc, _state.value.selected)
         /* Should libVLC take long - a drive stuck mid-read - the screen is
          * left anyway. */
@@ -647,7 +645,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         _state.update { it.copy(current = index, timeMs = 0, lengthMs = 0) }
         main.post {
             if (closing || finished) return@post
-            player.setMedia(media)
+            player.media = media
             player.play()
         }
     }
@@ -660,7 +658,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         if (point == null) {
             resumeApplied = true
             /* The version chosen, when not the demuxer's first title. */
-            request.startTitle?.takeIf { it != player.title }?.let { player.setTitle(it) }
+            request.startTitle?.takeIf { it != player.title }?.let { player.title = it }
             return
         }
         if (kind == DiscKind.CD_AUDIO) {
@@ -668,16 +666,16 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
              * started from the saved one. */
             if (subItems == null) return
             resumeApplied = true
-            player.setTime(point.timeMs)
+            player.time = point.timeMs
             return
         }
         resumeApplied = true
         if (point.title >= 0) {
-            player.setTitle(point.title)
+            player.title = point.title
         } else if (kind == DiscKind.BLURAY && point.lengthMs > 0) {
             /* A point saved during a Blu-ray's menus: the film's playlist,
              * found by its length - see saveResumePoint(). */
-            titleOfLength(point.lengthMs)?.takeIf { it != player.title }?.let { player.setTitle(it) }
+            titleOfLength(point.lengthMs)?.takeIf { it != player.title }?.let { player.title = it }
         }
         /* A DVD resumed with its menus: the menus are skipped, and the
          * choice applies to that title. */
@@ -695,7 +693,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
             pendingResumeMs = point.timeMs
             pendingResumeTitle = point.title
         } else {
-            player.setTime(point.timeMs)
+            player.time = point.timeMs
         }
     }
 
@@ -703,14 +701,14 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         val timeMs = pendingResumeMs ?: return
         if (player.title != pendingResumeTitle) return
         pendingResumeMs = null
-        player.setTime(timeMs)
+        player.time = timeMs
     }
 
     private fun saveResumePoint() {
         if (_state.value.ended || _state.value.inMenu) return
         /* Audio - a CD, a DVD's audio part - is not resumed; nor does the
          * audio part replace the point of the DVD's video part. */
-        if (kind == DiscKind.DVD_AUDIO || kind == DiscKind.CD_AUDIO) return
+        if (kind.isAudio) return
         /* The time last shown, which libVLC's TimeChanged gives from what has
          * been played. getTime() is the demuxer's position instead, ahead of
          * it by all that is buffered: on a Blu-ray, some ten seconds. */
@@ -821,7 +819,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         if (mode == MediaPlayer.StereoMode.Stereo &&
             current != MediaPlayer.StereoMode.Left && current != MediaPlayer.StereoMode.Right)
             return
-        if (current != mode) player.setStereoMode(mode)
+        if (current != mode) player.stereoMode = mode
     }
 
     /**
@@ -844,22 +842,10 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         val disc = request.disc
 
         val audioId = choice.audioId
-        if (audioId != null && audioTitle != title) {
-            val wanted = disc.audioTracks.firstOrNull { it.id == audioId }
-            if (wanted == null) {
-                audioTitle = title
-            } else {
-                val ordinal = disc.audioTracks.takeWhile { it.id != audioId }
-                    .count { sameLanguage(it.language, wanted.language) }
-                val track = player.getTracks(IMedia.Track.Type.Audio)
-                    ?.let { matchTrack(it, audioId, wanted.language, ordinal) }
-                if (track != null) {
-                    Log.d(LASER_TAG, "title $title: audio ${wanted.language} -> ${track.id}")
-                    player.selectTrack(track.id)
-                    audioTitle = title
-                }
-            }
-        }
+        if (audioId != null && audioTitle != title &&
+            selectTrack(IMedia.Track.Type.Audio, audioId, disc.audioTracks.map { it.id to it.language },
+                        title, "audio"))
+            audioTitle = title
 
         val subtitleId = choice.subtitleId
         /* "None": off, whatever libVLC or the disc turned on. */
@@ -867,31 +853,38 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
             player.unselectTrackType(IMedia.Track.Type.Text)
             subtitleTitle = title
         }
-        if (subtitleId != null && subtitleTitle != title) {
-            val wanted = disc.subtitleTracks.firstOrNull { it.id == subtitleId }
-            if (wanted == null) {
-                subtitleTitle = title
-            } else {
-                val ordinal = disc.subtitleTracks.takeWhile { it.id != subtitleId }
-                    .count { sameLanguage(it.language, wanted.language) }
-                val tracks = player.getTracks(IMedia.Track.Type.Text)
-                val track = tracks?.let { matchTrack(it, subtitleId, wanted.language, ordinal) }
-                if (track != null) {
-                    Log.d(LASER_TAG, "title $title: subtitles ${wanted.language} -> ${track.id}")
-                    player.selectTrack(track.id)
-                    subtitleTitle = title
-                } else {
-                    Log.d(LASER_TAG, "title $title: subtitles ${wanted.language} not among " +
-                          tracks?.joinToString { "${it.id}(${it.language})" })
-                }
-            }
+        if (subtitleId != null && subtitleTitle != title &&
+            selectTrack(IMedia.Track.Type.Text, subtitleId, disc.subtitleTracks.map { it.id to it.language },
+                        title, "subtitles"))
+            subtitleTitle = title
+    }
+
+    /**
+     * Plays the disc's track [id] of [type], one of [discTracks] (id,
+     * language), in [title]: the n-th track of its language, as the disc
+     * lists them. True once done - or if the disc has no such track; false
+     * if libVLC does not list it, yet.
+     */
+    private fun selectTrack(type: Int, id: Int, discTracks: List<Pair<Int, String>>,
+                            title: Int, what: String): Boolean {
+        val language = discTracks.firstOrNull { it.first == id }?.second ?: return true
+        val ordinal = discTracks.takeWhile { it.first != id }.count { sameLanguage(it.second, language) }
+        val tracks = player.getTracks(type)
+        val track = tracks?.let { matchTrack(it, id, language, ordinal) }
+        if (track == null) {
+            Log.d(LASER_TAG, "title $title: $what $language not among " +
+                  tracks?.joinToString { "${it.id}(${it.language})" })
+            return false
         }
+        Log.d(LASER_TAG, "title $title: $what $language -> ${track.id}")
+        player.selectTrack(track.id)
+        return true
     }
 
     /** What libVLC plays, as the disc's track ids, for the controls. */
     private fun refreshSelected() {
         /* The disc's lists are the film's: a DVD-Video or a Blu-ray. */
-        if (kind != DiscKind.DVD_VIDEO && kind != DiscKind.BLURAY) return
+        if (!kind.isFilm) return
         if (_state.value.inMenu || finished) return
         val disc = request.disc
         if (disc.audioTracks.isEmpty() && disc.subtitleTracks.isEmpty()) return
@@ -930,27 +923,6 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         else
             tracks.filter { sameLanguage(it.language.orEmpty(), language) }
                 .let { it.getOrNull(ordinal) ?: it.firstOrNull() }
-
-    /** "ar", "ara", "Arabic" and "arabe" are one language. */
-    private fun sameLanguage(a: String, b: String): Boolean {
-        if (a.isEmpty() || b.isEmpty()) return false
-        if (a.equals(b, ignoreCase = true)) return true
-        return languageKey(a).equals(languageKey(b), ignoreCase = true)
-    }
-
-    /* ISO 639-2 for a code; for a name, the code whose English or local
-     * name it is. */
-    private fun languageKey(s: String): String {
-        if (s.length <= 3) {
-            val locale = languageLocale(s) ?: return s
-            return try { locale.isO3Language } catch (_: MissingResourceException) { s }
-        }
-        val locale = Locale.getAvailableLocales().firstOrNull {
-            it.getDisplayLanguage(Locale.ENGLISH).equals(s, ignoreCase = true) ||
-            it.getDisplayLanguage(Locale.getDefault()).equals(s, ignoreCase = true)
-        } ?: return s
-        return try { locale.isO3Language } catch (_: MissingResourceException) { s }
-    }
 
     private companion object {
         const val MENU_WATCH_MS = 500L

@@ -29,11 +29,13 @@ object NativeEnvironment {
 
     /** The libaacs provider is installed now - perhaps since the start, and
      * then only used at the next one. */
-    fun libaacsProviderInstalled(context: Context): Boolean = try {
-        context.packageManager.getApplicationInfo(LIBAACS_PACKAGE, 0)
-        true
+    fun libaacsProviderInstalled(context: Context): Boolean = libaacsApk(context) != null
+
+    /** The provider's APK, or null if it is not installed. */
+    private fun libaacsApk(context: Context): String? = try {
+        context.packageManager.getApplicationInfo(LIBAACS_PACKAGE, 0).sourceDir
     } catch (_: PackageManager.NameNotFoundException) {
-        false
+        null
     }
 
     /** The BD-J runtime the app carries for this process's ABI, to be
@@ -95,9 +97,7 @@ object NativeEnvironment {
      * for this process's ABI. libbluray appends ".so.0" itself.
      */
     private fun configureLibaacs(context: Context) {
-        val apk = try {
-            context.packageManager.getApplicationInfo(LIBAACS_PACKAGE, 0).sourceDir
-        } catch (_: PackageManager.NameNotFoundException) {
+        val apk = libaacsApk(context) ?: run {
             Log.d(LASER_TAG, "$LIBAACS_PACKAGE not installed, AACS discs will not play")
             return
         }

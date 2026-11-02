@@ -71,15 +71,12 @@ import androidx.core.view.WindowInsetsControllerCompat
 import io.github.pierrebog.lasermediaplayer.R
 import io.github.pierrebog.lasermediaplayer.disc.DiscKind
 import io.github.pierrebog.lasermediaplayer.ui.FormFactor
-import io.github.pierrebog.lasermediaplayer.ui.home.AudioSheet
-import io.github.pierrebog.lasermediaplayer.ui.home.ChannelSheet
 import io.github.pierrebog.lasermediaplayer.ui.home.PlaybackRequest
-import io.github.pierrebog.lasermediaplayer.ui.home.SubtitleSheet
-import io.github.pierrebog.lasermediaplayer.ui.home.audioTrackShorts
-import io.github.pierrebog.lasermediaplayer.ui.home.channelLabel
+import io.github.pierrebog.lasermediaplayer.ui.home.TrackSheetKind
+import io.github.pierrebog.lasermediaplayer.ui.home.TrackSheets
 import io.github.pierrebog.lasermediaplayer.ui.home.discTitle
 import io.github.pierrebog.lasermediaplayer.ui.home.formatTime
-import io.github.pierrebog.lasermediaplayer.ui.home.subtitleLabels
+import io.github.pierrebog.lasermediaplayer.ui.home.trackButtonTexts
 import io.github.pierrebog.lasermediaplayer.ui.theme.LaserColors
 import io.github.pierrebog.lasermediaplayer.ui.theme.LaserType
 import kotlinx.coroutines.delay
@@ -87,8 +84,6 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.seconds
 import org.videolan.libvlc.util.VLCVideoLayout
-
-private enum class Sheet { AUDIO, SUBTITLES }
 
 /**
  * The video player: DVD-Video, Blu-ray, VCD. "Lecture vidéo" in the C′
@@ -119,7 +114,7 @@ fun VideoPlayer(
 ) {
     val overlay = form != FormFactor.PORTRAIT
     var controls by remember { mutableStateOf(true) }
-    var sheet by remember { mutableStateOf<Sheet?>(null) }
+    var sheet by remember { mutableStateOf<TrackSheetKind?>(null) }
     /* Bumped on every key or tap: the controls stay while the user acts. */
     var activity by remember { mutableIntStateOf(0) }
     val rootFocus = remember { FocusRequester() }
@@ -224,10 +219,10 @@ fun VideoPlayer(
             }
             if (controls && !ui.error && !ui.inMenu)
                 Overlay(request, ui, controller, form, playFocus, onBack, canFill,
-                        onAudio = { sheet = Sheet.AUDIO }, onSubtitles = { sheet = Sheet.SUBTITLES })
+                        onAudio = { sheet = TrackSheetKind.AUDIO }, onSubtitles = { sheet = TrackSheetKind.SUBTITLES })
         } else {
             Portrait(request, ui, controller, driveLabel, playFocus, onBack,
-                     onAudio = { sheet = Sheet.AUDIO }, onSubtitles = { sheet = Sheet.SUBTITLES },
+                     onAudio = { sheet = TrackSheetKind.AUDIO }, onSubtitles = { sheet = TrackSheetKind.SUBTITLES },
                      onBand = { slot = it.boundsInRoot() })
             if (ui.inMenu) MenuTouch(controller, videoModifier)
         }
@@ -237,7 +232,13 @@ fun VideoPlayer(
                  style = LaserType.Body, textAlign = TextAlign.Center,
                  modifier = Modifier.align(Alignment.Center).padding(horizontal = 32.dp))
 
-        Sheets(request, ui, controller, form, sheet) { sheet = null }
+        /* As on the disc screen; a choice applies at once and is saved for
+         * the disc. */
+        sheet?.let { open ->
+            TrackSheets(request.disc, ui.selected, open, form,
+                        onChoice = { controller.chooseTracks(it); sheet = null },
+                        onDismiss = { sheet = null })
+        }
     }
 }
 
@@ -350,8 +351,8 @@ private fun BoxScope.Overlay(
                     trackColor = LaserColors.Text.copy(alpha = 0.25f))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween) {
-                Transport(ui, controller, if (tv) 56.dp else 46.dp, if (tv) 68.dp else 56.dp,
-                          if (tv) 18.dp else 14.dp, playFocus, translucent = true)
+                ChapterTransport(ui, controller, if (tv) 56.dp else 46.dp, if (tv) 68.dp else 56.dp,
+                                 if (tv) 18.dp else 14.dp, playFocus, translucent = true)
                 Row(horizontalArrangement = Arrangement.spacedBy(if (tv) 12.dp else 8.dp)) {
                     if (canFill) {
                         val fill = stringResource(R.string.fill_screen)
@@ -396,7 +397,7 @@ private fun Portrait(
         } else {
             Column(margins, verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Transport(ui, controller, 52.dp, 64.dp, 28.dp, playFocus)
+                    ChapterTransport(ui, controller, 52.dp, 64.dp, 28.dp, playFocus)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     TrackButtons(request, ui, controller, 48.dp, 15.sp, onAudio, onSubtitles,
@@ -470,26 +471,21 @@ private fun TimeRow(ui: PlayerUi, controller: PlayerController, size: TextUnit, 
 }
 
 @Composable
-private fun Transport(ui: PlayerUi, controller: PlayerController, small: Dp, big: Dp, gap: Dp,
-                      playFocus: FocusRequester, translucent: Boolean = false) {
+private fun ChapterTransport(ui: PlayerUi, controller: PlayerController, small: Dp, big: Dp, gap: Dp,
+                             playFocus: FocusRequester, translucent: Boolean = false) {
     val vcd = controller.isVcd
-    Row(verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(gap)) {
-        /* Chapter buttons only when there are chapters to go to. */
-        val chapters = ui.chapters.size > 1
-        if (chapters)
-            CircleButton(R.drawable.ic_skip_previous, stringResource(if (vcd) R.string.previous_track else R.string.previous_chapter), small,
-                         onClick = controller::previousChapter, translucent = translucent,
-                         enabled = ui.chapter > 0 || canRestartChapter(ui))
-        CircleButton(if (ui.playing) R.drawable.ic_pause else R.drawable.ic_play,
-                     stringResource(if (ui.playing) R.string.player_pause else R.string.player_play),
-                     big, onClick = controller::togglePause, primary = true,
-                     modifier = Modifier.focusRequester(playFocus))
-        if (chapters)
-            CircleButton(R.drawable.ic_skip_next, stringResource(if (vcd) R.string.next_track else R.string.next_chapter), small,
-                         onClick = controller::nextChapter, translucent = translucent,
-                         enabled = ui.chapter + 1 < ui.chapters.size)
-    }
+    /* Chapter buttons only when there are chapters to go to. */
+    val chapters = ui.chapters.size > 1
+    Transport(
+        ui.playing, controller::togglePause,
+        previous = if (chapters) Skip(stringResource(if (vcd) R.string.previous_track else R.string.previous_chapter),
+                                      ui.chapter > 0 || canRestartChapter(ui), controller::previousChapter)
+                   else null,
+        next = if (chapters) Skip(stringResource(if (vcd) R.string.next_track else R.string.next_chapter),
+                                  ui.chapter + 1 < ui.chapters.size, controller::nextChapter)
+               else null,
+        small, big, Arrangement.spacedBy(gap), playFocus, translucent = translucent,
+    )
 }
 
 /** Far enough into the chapter for "previous" to go back to its start. */
@@ -508,22 +504,10 @@ private fun RowScope.TrackButtons(
     height: Dp, fontSize: TextUnit, onAudio: () -> Unit, onSubtitles: () -> Unit,
     translucent: Boolean = false, weighted: Boolean = false, withMenu: Boolean = true,
 ) {
-    val disc = request.disc
     val audioLabel = stringResource(R.string.audio_track)
     val subtitlesLabel = stringResource(R.string.subtitles)
     val each = if (weighted) Modifier.weight(1f) else Modifier
-    val audioText: String? = when {
-        request.row.kind == DiscKind.VIDEO_CD -> channelLabel(ui.tracks.channel)
-        disc.audioTracks.isNotEmpty() -> {
-            val i = disc.audioTracks.indexOfFirst { it.id == ui.selected.audioId }.coerceAtLeast(0)
-            audioTrackShorts(disc.audioTracks)[i]
-        }
-        else -> null
-    }
-    val subtitleText: String? = if (disc.subtitleTracks.isNotEmpty()) {
-        val i = disc.subtitleTracks.indexOfFirst { it.id == ui.selected.subtitleId }
-        if (i >= 0) subtitleLabels(disc.subtitleTracks)[i] else stringResource(R.string.subtitles_off)
-    } else null
+    val (audioText, subtitleText) = trackButtonTexts(request.disc, ui.selected)
 
     if (audioText != null)
         PillButton(R.drawable.ic_audio, audioText, "$audioLabel, $audioText", height, fontSize,
@@ -535,28 +519,6 @@ private fun RowScope.TrackButtons(
         PillButton(R.drawable.ic_menu, stringResource(R.string.disc_menu),
                    stringResource(R.string.disc_menu), height, fontSize,
                    controller::openDiscMenu, translucent = translucent)
-}
-
-/** The track sheets, as on the disc screen; a choice applies at once and is
- * saved for the disc. */
-@Composable
-private fun BoxScope.Sheets(request: PlaybackRequest, ui: PlayerUi, controller: PlayerController,
-                            form: FormFactor, sheet: Sheet?, onClose: () -> Unit) {
-    val disc = request.disc
-    when (sheet) {
-        Sheet.AUDIO -> if (request.row.kind == DiscKind.VIDEO_CD)
-            ChannelSheet(ui.tracks, form,
-                onPick = { controller.chooseTracks(ui.tracks.copy(channel = it)); onClose() },
-                onDismiss = onClose)
-        else
-            AudioSheet(disc, ui.selected, form,
-                onPick = { controller.chooseTracks(ui.selected.copy(audioId = it)); onClose() },
-                onDismiss = onClose)
-        Sheet.SUBTITLES -> SubtitleSheet(disc, ui.selected, form,
-            onPick = { controller.chooseTracks(ui.selected.copy(subtitleId = it, subtitlesOff = it == null)); onClose() },
-            onDismiss = onClose)
-        null -> {}
-    }
 }
 
 /** Arrow pad for a disc menu on a touch screen. */

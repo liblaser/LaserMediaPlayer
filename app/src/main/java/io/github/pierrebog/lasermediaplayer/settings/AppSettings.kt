@@ -75,8 +75,6 @@ data class LookupSettings(
     val tmdbKey: String = "",
     val keyStatus: KeyStatus = KeyStatus.NONE,
 ) {
-    /** True if CDs and DVD-Audios may be looked up on MusicBrainz. */
-    val albumsOnline: Boolean get() = albums
     /** True if films may be looked up on TMDB: on, with a key. */
     val filmsOnline: Boolean get() = films && tmdbKey.isNotEmpty()
 
@@ -88,6 +86,10 @@ data class LookupSettings(
         else -> true
     }
 }
+
+/** The constant of [E] named [name], as saved; null if there is none. */
+inline fun <reified E : Enum<E>> enumOrNull(name: String?): E? =
+    enumValues<E>().firstOrNull { it.name == name }
 
 /** The interface's language: the one chosen in the options, else the system's. */
 fun interfaceLocale(): Locale {
@@ -107,8 +109,7 @@ class AppSettings(context: Context) {
     private val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
 
     private val _theme = MutableStateFlow(
-        runCatching { ThemeMode.valueOf(prefs.getString(KEY_THEME, null) ?: "") }
-            .getOrDefault(ThemeMode.SYSTEM))
+        enumOrNull<ThemeMode>(prefs.getString(KEY_THEME, null)) ?: ThemeMode.SYSTEM)
     val theme: StateFlow<ThemeMode> = _theme.asStateFlow()
 
     fun setTheme(mode: ThemeMode) {
@@ -152,8 +153,8 @@ class AppSettings(context: Context) {
         albums = prefs.getBoolean(KEY_ALBUMS, true),
         films = prefs.getBoolean(KEY_FILMS, true),
         tmdbKey = prefs.getString(KEY_TMDB, null).orEmpty(),
-        keyStatus = runCatching { KeyStatus.valueOf(prefs.getString(KEY_TMDB_STATUS, null) ?: "") }
-            .getOrDefault(KeyStatus.NONE).let { if (it == KeyStatus.CHECKING) KeyStatus.UNVERIFIED else it },
+        keyStatus = (enumOrNull<KeyStatus>(prefs.getString(KEY_TMDB_STATUS, null)) ?: KeyStatus.NONE)
+            .let { if (it == KeyStatus.CHECKING) KeyStatus.UNVERIFIED else it },
     ))
     val lookups: StateFlow<LookupSettings> = _lookups.asStateFlow()
 

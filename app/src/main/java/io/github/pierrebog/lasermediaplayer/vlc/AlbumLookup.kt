@@ -1,10 +1,6 @@
 package io.github.pierrebog.lasermediaplayer.vlc
 
-import android.os.Handler
-import android.os.HandlerThread
-import android.os.Process
 import android.util.Log
-import androidx.core.net.toUri
 import io.github.pierrebog.lasermediaplayer.LASER_TAG
 import io.github.pierrebog.lasermediaplayer.disc.AlbumInfo
 import io.github.pierrebog.lasermediaplayer.disc.AlbumStore
@@ -18,13 +14,7 @@ import io.github.pierrebog.lasermediaplayer.disc.tocId
 import io.github.pierrebog.lasermediaplayer.settings.AppSettings
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
-import org.videolan.libvlc.Media
 import org.videolan.libvlc.interfaces.IMedia
-import kotlin.coroutines.resume
 
 /**
  * Names an audio CD or a DVD-Audio: album, artist, cover, track titles.
@@ -47,16 +37,12 @@ import kotlin.coroutines.resume
  * and MusicBrainz is searched by its label (see [MusicBrainz.searchDvdAudio]).
  */
 class AlbumLookup(
-    private val engine: VlcEngine,
+    engine: VlcEngine,
     private val store: AlbumStore,
     private val settings: AppSettings,
 ) {
 
-    private val thread = HandlerThread(
-        "laser-album",
-        Process.THREAD_PRIORITY_DEFAULT + Process.THREAD_PRIORITY_LESS_FAVORABLE
-    ).apply { start() }
-    private val handler = Handler(thread.looper)
+    private val parser = MediaParser(engine, "laser-album")
 
     /** One track as the cdda module lists it. */
     private data class Entry(
@@ -100,7 +86,7 @@ class AlbumLookup(
         /* The CD-Text meanwhile, and for good if MusicBrainz is not asked
          * or finds nothing. */
         return withToc.copy(album = cdText(entries),
-                            lookupDone = !settings.lookups.value.albumsOnline)
+                            lookupDone = !settings.lookups.value.albums)
     }
 
     /**
@@ -110,7 +96,7 @@ class AlbumLookup(
      * up by its label and its tracks' lengths.
      */
     suspend fun online(disc: DiscInfo): DiscInfo? {
-        if (!settings.lookups.value.albumsOnline) return null
+        if (!settings.lookups.value.albums) return null
         /* A CD by its table of contents, a DVD-Audio by its label. */
         val query: String?
         val id = when {
@@ -198,87 +184,23 @@ class AlbumLookup(
 
     /**
      * Lists the CD's tracks through the cdda module: parsed, as
-     * DiscClassifier does - the parse ends, with a status, whatever happens,
-     * and libVLC's timeout interrupts it, so that the drive is let go before
-     * this returns.
+     * DiscClassifier does (see [MediaParser]), so that the drive is let go
+     * before this returns. The tracks and their CD-Text only: the cdda
+     * module would otherwise ask MusicBrainz itself.
      *
      * @return the tracks, or null if the listing failed or timed out
      */
     private suspend fun browse(mrl: String): List<Entry>? {
-        /* Touched on the handler thread only. */
-        var media: Media? = null
-        try {
-            /* The parse's status, or null if libVLC never ended it. */
-            val status = withTimeoutOrNull(SAFETY_TIMEOUT) {
-                suspendCancellableCoroutine<Int> { cont ->
-                    handler.post {
-                        /* The tracks and their CD-Text only: the cdda module
-                         * would otherwise ask MusicBrainz itself. */
-                        val m = Media(engine.libVlc, mrl.toUri()).apply {
-                            addOption(":no-metadata-network-access")
-                        }
-                        media = m
-                        /* Any thread: only resumes the caller. */
-                        m.setEventListener { event ->
-                            if (event.type == IMedia.Event.ParsedChanged && cont.isActive)
-                                cont.resume(event.parsedStatus)
-                        }
-                        if (!m.parseAsync(IMedia.Parse.ParseNetwork, BROWSE_TIMEOUT_MS) &&
-                            cont.isActive)
-                            cont.resume(IMedia.ParsedStatus.Failed)
-                    }
-                }
-            }
-            if (status != IMedia.ParsedStatus.Done) {
-                Log.w(LASER_TAG, "listing $mrl " + when (status) {
-                    null -> "never ended"
-                    IMedia.ParsedStatus.Timeout -> "timed out"
-                    else -> "failed ($status)"
-                })
-                return null
-            }
-            return onHandler {
-                val list = media?.subItems() ?: return@onHandler emptyList()
-                try {
-                    (0 until list.count).mapNotNull { i ->
-                        list.getMediaAt(i)?.let { item ->
-                            try {
-                                entryOf(item)
-                            } finally {
-                                item.release()
-                            }
-                        }
-                    }
-                } finally {
-                    list.release()
-                }
-            }
-        } finally {
-            /* NonCancellable: a cancelled caller must still release the
-             * media, which holds the parse's input. */
-            withContext(NonCancellable) {
-                onHandler {
-                    media?.setEventListener(null)
-                    media?.release()
-                    media = null
-                }
-            }
-        }
+        val parsed = parser.parse(mrl, listOf(":no-metadata-network-access"),
+                                  BROWSE_TIMEOUT_MS, SAFETY_TIMEOUT) { items -> items.map(::entryOf) }
+        if (parsed is Parsed.Done) return parsed.value
+        Log.w(LASER_TAG, "listing $mrl " + when (parsed) {
+            Parsed.NeverEnded -> "never ended"
+            Parsed.TimedOut -> "timed out"
+            else -> "failed"
+        })
+        return null
     }
-
-    /** Runs [block] on [handler]'s thread and returns its result - on the
-     * calling thread if that one has quit. */
-    private suspend fun <T> onHandler(block: () -> T): T =
-        suspendCancellableCoroutine { cont ->
-            val posted = handler.post {
-                val result = runCatching(block)
-                if (cont.isActive) cont.resumeWith(result)
-            }
-            if (!posted) {
-                val result = runCatching(block)
-                if (cont.isActive) cont.resumeWith(result)
-            }
-        }
 
     private fun entryOf(media: IMedia): Entry {
         fun meta(m: Int) = media.getMeta(m)?.trim()?.takeIf { it.isNotEmpty() }

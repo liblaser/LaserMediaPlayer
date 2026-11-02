@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -41,6 +43,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.pierrebog.lasermediaplayer.R
 import io.github.pierrebog.lasermediaplayer.ui.FormFactor
@@ -51,24 +54,21 @@ import io.github.pierrebog.lasermediaplayer.ui.theme.LaserType
 data class TrackOption(val label: String, val detail: String?)
 
 /**
- * The track choice: a bottom sheet on a phone, a side panel on a TV, over a
- * dimmed disc screen - "Choix de la piste audio" in the mockups.
+ * A sheet over the dimmed screen, titled [title]: a bottom sheet on a phone,
+ * a side panel [tvWidth] wide on a TV. The track sheets and the TMDB key's.
  *
  * Drawn in the screen's own tree rather than as a dialog window, so that the
  * remote's focus stays in one place; [BackHandler] closes it.
  */
 @Composable
-fun BoxScope.TrackSheet(
+fun BoxScope.SheetFrame(
     title: String,
-    options: List<TrackOption>,
-    selected: Int,
     form: FormFactor,
-    onPick: (Int) -> Unit,
+    tvWidth: Dp,
     onDismiss: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     BackHandler(onBack = onDismiss)
-    val firstFocus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { firstFocus.requestFocus() } }
 
     Box(Modifier
         .matchParentSize()
@@ -79,7 +79,7 @@ fun BoxScope.TrackSheet(
 
     val tv = form == FormFactor.TV
     val panel = if (tv)
-        Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(460.dp)
+        Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(tvWidth)
             .background(LaserColors.Sheet)
     else
         Modifier.align(Alignment.BottomCenter).fillMaxWidth()
@@ -91,9 +91,10 @@ fun BoxScope.TrackSheet(
             /* Swallows clicks, so that they do not reach the scrim. */
             .clickable(interactionSource = remember { MutableInteractionSource() },
                        indication = null, onClick = {})
-            /* The sheet's colour runs under the navigation bar, its rows
-             * stay above it. */
+            /* The sheet's colour runs under the navigation bar - and the
+             * keyboard - its content stays above them. */
             .navigationBarsPadding()
+            .imePadding()
             .padding(horizontal = if (tv) 32.dp else 20.dp, vertical = if (tv) 40.dp else 12.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
@@ -101,6 +102,24 @@ fun BoxScope.TrackSheet(
             Box(Modifier.align(Alignment.CenterHorizontally).size(40.dp, 4.dp)
                 .clip(RoundedCornerShape(2.dp)).background(LaserColors.Border))
         Text(title, style = LaserType.SheetTitle)
+        content()
+    }
+}
+
+/** The track choice - "Choix de la piste audio" in the mockups. */
+@Composable
+fun BoxScope.TrackSheet(
+    title: String,
+    options: List<TrackOption>,
+    selected: Int,
+    form: FormFactor,
+    onPick: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val firstFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { firstFocus.requestFocus() } }
+
+    SheetFrame(title, form, 460.dp, onDismiss) {
         Column(
             modifier = Modifier
                 .selectableGroup()
@@ -116,7 +135,7 @@ fun BoxScope.TrackSheet(
                                else Modifier,
                 )
             }
-            Spacer(Modifier.height(if (tv) 16.dp else 32.dp))
+            Spacer(Modifier.height(if (form == FormFactor.TV) 16.dp else 32.dp))
         }
     }
 }

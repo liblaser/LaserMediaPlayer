@@ -47,6 +47,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -93,6 +95,42 @@ fun PlayerHeader(onBack: () -> Unit, driveLabel: String?, tv: Boolean,
         if (tv && driveLabel != null)
             Text(driveLabel, style = LaserType.Small.copy(fontSize = LaserType.Small.fontSize * 1.3f),
                  maxLines = 1)
+    }
+}
+
+/** A skip button of [Transport]: faded, doing nothing, unless [enabled]. */
+class Skip(val description: String, val enabled: Boolean, val onClick: () -> Unit)
+
+/**
+ * Previous, play or pause, next - the players' transport. No skip button
+ * where [previous] or [next] is null; [playFocus] takes the play button.
+ */
+@Composable
+fun Transport(
+    playing: Boolean,
+    onTogglePause: () -> Unit,
+    previous: Skip?,
+    next: Skip?,
+    small: Dp,
+    big: Dp,
+    arrangement: Arrangement.Horizontal,
+    playFocus: FocusRequester,
+    modifier: Modifier = Modifier,
+    translucent: Boolean = false,
+) {
+    Row(modifier, horizontalArrangement = arrangement, verticalAlignment = Alignment.CenterVertically) {
+        if (previous != null)
+            CircleButton(R.drawable.ic_skip_previous, previous.description, small,
+                         onClick = previous.onClick, translucent = translucent,
+                         enabled = previous.enabled)
+        CircleButton(if (playing) R.drawable.ic_pause else R.drawable.ic_play,
+                     stringResource(if (playing) R.string.player_pause else R.string.player_play),
+                     big, onClick = onTogglePause, primary = true,
+                     modifier = Modifier.focusRequester(playFocus))
+        if (next != null)
+            CircleButton(R.drawable.ic_skip_next, next.description, small,
+                         onClick = next.onClick, translucent = translucent,
+                         enabled = next.enabled)
     }
 }
 

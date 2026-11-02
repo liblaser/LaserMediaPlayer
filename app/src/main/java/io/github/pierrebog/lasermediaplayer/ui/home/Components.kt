@@ -51,7 +51,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.pierrebog.lasermediaplayer.R
 import io.github.pierrebog.lasermediaplayer.disc.DiscInfo
-import io.github.pierrebog.lasermediaplayer.disc.DiscKind
 import io.github.pierrebog.lasermediaplayer.ui.rememberCover
 import io.github.pierrebog.lasermediaplayer.ui.player.animationsEnabled
 import io.github.pierrebog.lasermediaplayer.ui.theme.BodyFamily
@@ -191,7 +190,7 @@ fun discCaseWidth(disc: DiscInfo, height: Dp): Dp {
     val square = if (disc.lookupDone && disc.cover == null)
         generatedCoverIsSquare(disc.kind)
     else
-        disc.kind == DiscKind.CD_AUDIO || disc.kind == DiscKind.DVD_AUDIO
+        disc.kind.isAudio
     val inner = (height - 16.dp).coerceAtLeast(0.dp)
     return (if (square) inner else inner / 1.5f) + 16.dp
 }
@@ -209,7 +208,7 @@ fun discCaseWidth(disc: DiscInfo, height: Dp): Dp {
  */
 @Composable
 fun DiscCase(disc: DiscInfo, width: Dp, modifier: Modifier = Modifier) {
-    val square = disc.kind == DiscKind.CD_AUDIO || disc.kind == DiscKind.DVD_AUDIO
+    val square = disc.kind.isAudio
     val inner = width - 16.dp
     val innerHeight = if (square) inner else inner * 1.5f
     Box(

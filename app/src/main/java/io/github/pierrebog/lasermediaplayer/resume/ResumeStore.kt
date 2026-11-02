@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.core.content.edit
 import io.github.pierrebog.lasermediaplayer.disc.DiscInfo
 import io.github.pierrebog.lasermediaplayer.disc.PlayMode
+import io.github.pierrebog.lasermediaplayer.settings.enumOrNull
 
 /**
  * Where playback of a disc stopped, so that the disc screen can offer to
@@ -62,8 +63,7 @@ class ResumeStore(context: Context) {
         val k = pointKey(disc, version)
         val time = prefs.getLong("$k|time", -1)
         if (time < 0) return null
-        val mode = prefs.getString("$k|mode", null)
-            ?.let { runCatching { PlayMode.valueOf(it) }.getOrNull() } ?: PlayMode.DIRECT
+        val mode = enumOrNull<PlayMode>(prefs.getString("$k|mode", null)) ?: PlayMode.DIRECT
         val options = prefs.getString("$k|options", null)
             ?.split('\n')?.filter { it.isNotEmpty() }.orEmpty()
         return ResumePoint(prefs.getInt("$k|title", -1), time, prefs.getLong("$k|length", 0),
@@ -100,9 +100,7 @@ class ResumeStore(context: Context) {
         return TrackChoice(
             prefs.getInt("$k|audio", -1).takeIf { it >= 0 },
             prefs.getInt("$k|sub", -1).takeIf { it >= 0 },
-            prefs.getString("$k|channel", null)
-                ?.let { runCatching { AudioChannel.valueOf(it) }.getOrNull() }
-                ?: AudioChannel.STEREO,
+            enumOrNull<AudioChannel>(prefs.getString("$k|channel", null)) ?: AudioChannel.STEREO,
             prefs.getBoolean("$k|suboff", false),
         )
     }

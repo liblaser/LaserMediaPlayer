@@ -6,7 +6,6 @@ import io.github.pierrebog.lasermediaplayer.LASER_TAG
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.security.MessageDigest
 
 /** A CD track as the lookup names it; null where nothing is known. */
 data class AlbumTrack(val title: String?, val artist: String?)
@@ -32,11 +31,7 @@ data class AlbumInfo(
  * which the app cannot compute without the sector offsets, but stable for a
  * given pressing.
  */
-fun tocId(lengthsMs: List<Long>): String {
-    val digest = MessageDigest.getInstance("SHA-1")
-        .digest(lengthsMs.joinToString(",").toByteArray())
-    return digest.take(10).joinToString("") { "%02x".format(it) }
-}
+fun tocId(lengthsMs: List<Long>): String = shortHash(lengthsMs.joinToString(","))
 
 /** Identifies a DVD-Audio by its tracks' lengths, as laser.c reads them;
  * apart from the CDs' ids. */
@@ -82,10 +77,7 @@ class AlbumStore(context: Context) {
                 }
             })
         try {
-            dir.mkdirs()
-            val tmp = File(dir, "$id.json.tmp")
-            tmp.writeText(o.toString())
-            if (!tmp.renameTo(File(dir, "$id.json"))) tmp.delete()
+            writeAtomically(File(dir, "$id.json"), o.toString())
         } catch (e: Exception) {
             Log.w(LASER_TAG, "cannot save album $id", e)
         }

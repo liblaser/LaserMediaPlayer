@@ -191,7 +191,7 @@ class DriveRepository(
         scope.launch {
             var previous = settings.lookups.value
             settings.lookups.collect { now ->
-                if (now.albumsOnline && !previous.albumsOnline) nameAlbums()
+                if (now.albums && !previous.albums) nameAlbums()
                 if (now.filmsOnline && (!previous.filmsOnline || now.tmdbKey != previous.tmdbKey))
                     nameFilms()
                 previous = now
@@ -225,7 +225,7 @@ class DriveRepository(
     private fun nameFilms() {
         _drives.value.forEach { drive ->
             (drive.status as? DriveStatus.Ready)?.disc
-                ?.takeIf { it.kind == DiscKind.DVD_VIDEO || it.kind == DiscKind.BLURAY }
+                ?.takeIf { it.kind.isFilm }
                 ?.let(::nameFilm)
         }
     }
@@ -236,7 +236,7 @@ class DriveRepository(
     private fun nameAlbums() {
         _drives.value.forEach { drive ->
             val disc = (drive.status as? DriveStatus.Ready)?.disc
-                ?.takeIf { (it.kind == DiscKind.CD_AUDIO || it.kind == DiscKind.DVD_AUDIO) &&
+                ?.takeIf { it.kind.isAudio &&
                            it.album?.cover == null } ?: return@forEach
             scope.launch {
                 val named = albums.online(disc) ?: return@launch
@@ -538,16 +538,7 @@ class DriveRepository(
             /* Nothing found: the title of an earlier language goes too. The
              * lookup is over either way. */
             val film = films.find(disc)
-            _drives.update { list ->
-                list.map { drive ->
-                    val status = drive.status
-                    if (drive.deviceName == disc.deviceName && status is DriveStatus.Ready &&
-                        status.disc.key == disc.key)
-                        drive.copy(status = DriveStatus.Ready(
-                            status.disc.copy(film = film, lookupDone = true)))
-                    else drive
-                }
-            }
+            updateDisc(disc) { it.copy(film = film, lookupDone = true) }
         }
     }
 

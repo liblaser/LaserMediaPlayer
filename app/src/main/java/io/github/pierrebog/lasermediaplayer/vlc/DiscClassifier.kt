@@ -1,22 +1,12 @@
 package io.github.pierrebog.lasermediaplayer.vlc
 
-import android.os.Handler
-import android.os.HandlerThread
-import android.os.Process
 import android.util.Log
-import androidx.core.net.toUri
 import io.github.pierrebog.lasermediaplayer.LASER_TAG
 import io.github.pierrebog.lasermediaplayer.disc.DiscInfo
 import io.github.pierrebog.lasermediaplayer.disc.LaserMrl
 import io.github.pierrebog.lasermediaplayer.disc.TrackLists
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
-import org.videolan.libvlc.Media
 import org.videolan.libvlc.interfaces.IMedia
-import kotlin.coroutines.resume
 
 /** Why a drive has no disc to show, as laser.c says it. */
 enum class NoDiscReason {
@@ -41,24 +31,15 @@ sealed interface Classification {
  * Classifies the disc behind an opened USB descriptor, by parsing
  * "laser-dir://<fd>" through VLC's laser access module: laser.c identifies
  * the disc with liblaser and lists one item per way of playing it, with the
- * title and, for a video disc, its tracks as extra metadata.
+ * title and, for a video disc, its tracks as extra metadata. See
+ * [MediaParser].
  *
- * Parsed, not browsed: the parse ends - with a status - whatever happens,
- * a drive laser.c cannot open included, and libVLC applies the timeout
- * itself, interrupting the parse, which laser.c and liblaser then give up.
- * MediaBrowser ends only with a list of items, and cannot stop its parse.
- *
- * One parse at a time; the caller (DriveRepository) classifies drives one
- * after the other. The media is created, read and released on [handler]'s
- * thread.
+ * One classification at a time; the caller (DriveRepository) classifies
+ * drives one after the other.
  */
-class DiscClassifier(private val engine: VlcEngine) {
+class DiscClassifier(engine: VlcEngine) {
 
-    private val thread = HandlerThread(
-        "laser-classifier",
-        Process.THREAD_PRIORITY_DEFAULT + Process.THREAD_PRIORITY_LESS_FAVORABLE
-    ).apply { start() }
-    private val handler = Handler(thread.looper)
+    private val parser = MediaParser(engine, "laser-classifier")
 
     /**
      * @param fd an opened, permission-granted USB descriptor, owned by the
@@ -67,82 +48,25 @@ class DiscClassifier(private val engine: VlcEngine) {
      *         optical drive, which laser.c refuses, says nothing and counts
      *         as unrecognised; or a browse that timed out
      */
-    suspend fun classify(fd: Int, deviceName: String): Classification {
-        /* Touched on the handler thread only. */
-        var media: Media? = null
-        val collected = ArrayList<IMedia>()
-        try {
-            /* The parse's status, or null if libVLC never ended it. */
-            val status = withTimeoutOrNull(SAFETY_TIMEOUT) {
-                suspendCancellableCoroutine<Int> { cont ->
-                    handler.post {
-                        val m = Media(engine.libVlc, LaserMrl.classification(fd).toUri())
-                        media = m
-                        /* Any thread: only resumes the caller. */
-                        m.setEventListener { event ->
-                            if (event.type == IMedia.Event.ParsedChanged && cont.isActive)
-                                cont.resume(event.parsedStatus)
-                        }
-                        if (!m.parseAsync(IMedia.Parse.ParseNetwork, CLASSIFY_TIMEOUT_MS) &&
-                            cont.isActive)
-                            cont.resume(IMedia.ParsedStatus.Failed)
-                    }
-                }
+    suspend fun classify(fd: Int, deviceName: String): Classification =
+        when (val parsed = parser.parse(LaserMrl.classification(fd), emptyList(),
+                                        CLASSIFY_TIMEOUT_MS, SAFETY_TIMEOUT) { discOf(it, deviceName) }) {
+            is Parsed.Done -> parsed.value
+            /* libVLC's own timeout interrupts the parse and ends it; the
+             * safety one only stops waiting for it. */
+            Parsed.NeverEnded -> {
+                Log.w(LASER_TAG, "classification of $deviceName never ended")
+                Classification.TimedOut
             }
-            when (status) {
-                /* libVLC's own timeout interrupts the parse and ends it; this
-                 * one is only a safety net, which cannot stop it. */
-                null -> {
-                    Log.w(LASER_TAG, "classification of $deviceName never ended")
-                    return Classification.TimedOut
-                }
-                IMedia.ParsedStatus.Timeout -> {
-                    Log.w(LASER_TAG, "classification of $deviceName timed out")
-                    return Classification.TimedOut
-                }
-                /* laser.c could not open the drive: its claim refused, the
-                 * device gone, or not an optical drive. */
-                IMedia.ParsedStatus.Failed -> {
-                    Log.w(LASER_TAG, "classification of $deviceName failed to open the drive")
-                    return Classification.NoDisc(NoDiscReason.NOT_READY)
-                }
+            Parsed.TimedOut -> {
+                Log.w(LASER_TAG, "classification of $deviceName timed out")
+                Classification.TimedOut
             }
-            /* The rows laser.c listed, kept until discOf() has read them. */
-            val medias = onHandler {
-                val list = media?.subItems() ?: return@onHandler emptyList()
-                try {
-                    (0 until list.count).mapNotNull { list.getMediaAt(it) }.also { collected += it }
-                } finally {
-                    list.release()
-                }
-            }
-            return discOf(medias, deviceName)
-        } finally {
-            /* NonCancellable: a cancelled caller must still release the
-             * media, which holds the parse's input. */
-            withContext(NonCancellable) {
-                onHandler {
-                    media?.setEventListener(null)
-                    media?.release()
-                    media = null
-                    collected.forEach { it.release() }
-                    collected.clear()
-                }
-            }
-        }
-    }
-
-    /** Runs [block] on [handler]'s thread and returns its result - on the
-     * calling thread if that one has quit. */
-    private suspend fun <T> onHandler(block: () -> T): T =
-        suspendCancellableCoroutine { cont ->
-            val posted = handler.post {
-                val result = runCatching(block)
-                if (cont.isActive) cont.resumeWith(result)
-            }
-            if (!posted) {
-                val result = runCatching(block)
-                if (cont.isActive) cont.resumeWith(result)
+            /* laser.c could not open the drive: its claim refused, the device
+             * gone, or not an optical drive. */
+            Parsed.Failed -> {
+                Log.w(LASER_TAG, "classification of $deviceName failed to open the drive")
+                Classification.NoDisc(NoDiscReason.NOT_READY)
             }
         }
 

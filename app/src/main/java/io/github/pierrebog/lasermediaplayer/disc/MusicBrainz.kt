@@ -16,7 +16,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
-import java.net.URL
 import java.net.URLEncoder
 import java.security.MessageDigest
 import kotlin.math.abs
@@ -52,7 +51,6 @@ object MusicBrainz {
 
     private const val SERVER = "https://musicbrainz.org/ws/2"
     private const val COVERS = "https://coverartarchive.org"
-    private const val TIMEOUT_MS = 10_000
     /* A DVD-Audio's search: releases looked at, and their tolerance. */
     private const val CANDIDATES = 5
     /* MusicBrainz asks for a request a second at most. */
@@ -88,24 +86,7 @@ object MusicBrainz {
 
     /** Downloads the first cover of [urls] that exists to [dest]. */
     suspend fun fetchCover(urls: List<String>, dest: File): File? = withContext(Dispatchers.IO) {
-        for (url in urls) {
-            val tmp = File(dest.path + ".tmp")
-            try {
-                val connection = open(url, json = false)
-                try {
-                    if (connection.responseCode != HttpURLConnection.HTTP_OK) continue
-                    connection.inputStream.use { input -> tmp.outputStream().use { input.copyTo(it) } }
-                } finally {
-                    connection.disconnect()
-                }
-                if (tmp.renameTo(dest)) return@withContext dest
-            } catch (e: Exception) {
-                Log.w(LASER_TAG, "cannot fetch cover $url", e)
-            } finally {
-                tmp.delete()
-            }
-        }
-        null
+        urls.firstNotNullOfOrNull { Http.download(it, dest, USER_AGENT) }
     }
 
     /**
@@ -291,7 +272,7 @@ object MusicBrainz {
     private suspend fun get(url: String): String? = gate.withLock {
         repeat(RETRIES + 1) { attempt ->
             delay(REQUEST_GAP - (SystemClock.elapsedRealtime() - lastRequest).milliseconds)
-            val connection = open(url, json = true)
+            val connection = Http.open(url, USER_AGENT, json = true)
             val retryAfter: Duration
             try {
                 val code = connection.responseCode
@@ -318,15 +299,6 @@ object MusicBrainz {
         }
         null
     }
-
-    private fun open(url: String, json: Boolean): HttpURLConnection =
-        (URL(url).openConnection() as HttpURLConnection).apply {
-            ExtraRoots.apply(this)
-            connectTimeout = TIMEOUT_MS
-            readTimeout = TIMEOUT_MS
-            setRequestProperty("User-Agent", USER_AGENT)
-            if (json) setRequestProperty("Accept", "application/json")
-        }
 
     private fun JSONArray?.objects(): List<JSONObject> =
         if (this == null) emptyList() else (0 until length()).mapNotNull { optJSONObject(it) }

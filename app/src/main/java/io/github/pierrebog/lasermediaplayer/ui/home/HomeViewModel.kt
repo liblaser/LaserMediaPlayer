@@ -101,7 +101,7 @@ class HomeViewModel(private val app: LaserApp) : ViewModel() {
      */
     private fun tracksFor(disc: DiscInfo, defaults: PlaybackDefaults): TrackChoice {
         if (!app.resume.hasTrackChoice(disc) &&
-            (disc.kind == DiscKind.DVD_VIDEO || disc.kind == DiscKind.BLURAY))
+            disc.kind.isFilm)
             return defaultTracks(disc, defaults)
         val choice = app.resume.trackChoice(disc)
         /* Tracks of another version than the one now chosen: its first
@@ -205,7 +205,7 @@ class HomeViewModel(private val app: LaserApp) : ViewModel() {
      * Audio - a CD, a DVD's audio part - is never resumed. */
     private fun resumeRow(disc: DiscInfo, point: ResumePoint): DiscRow? =
         disc.rows.firstOrNull {
-            it.mode == point.mode && it.kind != DiscKind.DVD_AUDIO && it.kind != DiscKind.CD_AUDIO
+            it.mode == point.mode && !it.kind.isAudio
         }
 
     private fun noMenus(disc: DiscInfo): Triple<DiscRow?, List<String>, ResumePoint?> =

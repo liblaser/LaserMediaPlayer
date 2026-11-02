@@ -7,17 +7,9 @@ import io.github.pierrebog.lasermediaplayer.disc.AudioTrackInfo
 import io.github.pierrebog.lasermediaplayer.disc.DiscInfo
 import io.github.pierrebog.lasermediaplayer.disc.DiscKind
 import io.github.pierrebog.lasermediaplayer.disc.SubtitleTrackInfo
-import io.github.pierrebog.lasermediaplayer.settings.languageLocale
+import io.github.pierrebog.lasermediaplayer.settings.languageName
 import java.text.Collator
 import java.util.Locale
-
-/** The language's name in the user's language, capitalized, or null. */
-fun languageName(code: String): String? {
-    if (code.isEmpty()) return null
-    val name = languageLocale(code)?.getDisplayLanguage(Locale.getDefault()) ?: return null
-    if (name.isEmpty() || name.equals(code, ignoreCase = true)) return null
-    return name.replaceFirstChar { it.titlecase(Locale.getDefault()) }
-}
 
 /** A track with its label, for the track lists; [name] is the label
  * without the track number two alike tracks get. */

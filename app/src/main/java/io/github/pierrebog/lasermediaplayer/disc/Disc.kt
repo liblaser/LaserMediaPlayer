@@ -11,7 +11,14 @@ import java.io.File
  * of its own and substitutes its descriptor through [LaserMrl.withFd].
  */
 
-enum class DiscKind { CD_AUDIO, DVD_VIDEO, DVD_AUDIO, BLURAY, VIDEO_CD }
+enum class DiscKind {
+    CD_AUDIO, DVD_VIDEO, DVD_AUDIO, BLURAY, VIDEO_CD;
+
+    /** Played on the audio screen, named by MusicBrainz. */
+    val isAudio: Boolean get() = this == CD_AUDIO || this == DVD_AUDIO
+    /** A film's disc, named by TMDB, with its disc menus. */
+    val isFilm: Boolean get() = this == DVD_VIDEO || this == BLURAY
+}
 
 /** How a row plays the disc. A DVD-Video offers both menu modes. */
 enum class PlayMode { MENUS, NO_MENUS, DIRECT }

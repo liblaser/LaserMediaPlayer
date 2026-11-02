@@ -8,7 +8,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.pierrebog.lasermediaplayer.LaserApp
-import io.github.pierrebog.lasermediaplayer.disc.DiscKind
 import io.github.pierrebog.lasermediaplayer.ui.home.PlaybackRequest
 import io.github.pierrebog.lasermediaplayer.ui.rememberFormFactor
 import io.github.pierrebog.lasermediaplayer.ui.theme.DarkPalette
@@ -44,7 +43,7 @@ fun PlayerScreen(request: PlaybackRequest, app: LaserApp, onExit: () -> Unit) {
         }
     }
 
-    val audio = request.row.kind == DiscKind.CD_AUDIO || request.row.kind == DiscKind.DVD_AUDIO
+    val audio = request.row.kind.isAudio
     if (audio) {
         BackHandler(onBack = exit)
         val lookups by app.settings.lookups.collectAsStateWithLifecycle()

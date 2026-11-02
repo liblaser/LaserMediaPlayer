@@ -6,12 +6,59 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.res.stringResource
 import io.github.pierrebog.lasermediaplayer.R
 import io.github.pierrebog.lasermediaplayer.disc.DiscInfo
+import io.github.pierrebog.lasermediaplayer.disc.DiscKind
 import io.github.pierrebog.lasermediaplayer.disc.VersionInfo
 import io.github.pierrebog.lasermediaplayer.resume.AudioChannel
 import io.github.pierrebog.lasermediaplayer.resume.TrackChoice
+import io.github.pierrebog.lasermediaplayer.settings.languageName
 import io.github.pierrebog.lasermediaplayer.ui.FormFactor
 
 /* The track sheets, shared by the disc screen and the player. */
+
+/** The track sheets a disc's buttons open. */
+enum class TrackSheetKind { AUDIO, SUBTITLES }
+
+/**
+ * The audio sheet - a Video CD's channels - or the subtitle sheet, showing
+ * [choice]. A pick gives the new choice, which the caller applies and saves,
+ * then closes the sheet.
+ */
+@Composable
+fun BoxScope.TrackSheets(
+    disc: DiscInfo, choice: TrackChoice, sheet: TrackSheetKind, form: FormFactor,
+    onChoice: (TrackChoice) -> Unit, onDismiss: () -> Unit,
+) {
+    when (sheet) {
+        TrackSheetKind.AUDIO -> if (disc.kind == DiscKind.VIDEO_CD)
+            ChannelSheet(choice, form, onPick = { onChoice(choice.copy(channel = it)) },
+                         onDismiss = onDismiss)
+        else
+            AudioSheet(disc, choice, form, onPick = { onChoice(choice.copy(audioId = it)) },
+                       onDismiss = onDismiss)
+        TrackSheetKind.SUBTITLES -> SubtitleSheet(disc, choice, form,
+            onPick = { onChoice(choice.copy(subtitleId = it, subtitlesOff = it == null)) },
+            onDismiss = onDismiss)
+    }
+}
+
+/**
+ * What the audio and subtitle buttons say for [choice]: the audio track -
+ * "Français · 5.1", or a Video CD's channel - and the subtitles, or "None".
+ * Null for a button the disc has nothing to choose with.
+ */
+@Composable
+fun trackButtonTexts(disc: DiscInfo, choice: TrackChoice): Pair<String?, String?> {
+    if (disc.kind == DiscKind.VIDEO_CD) return channelLabel(choice.channel) to null
+    /* A new disc plays its first track, as the disc orders them. */
+    val audio = if (disc.audioTracks.isEmpty()) null else
+        audioTrackShorts(disc.audioTracks)[
+            disc.audioTracks.indexOfFirst { it.id == choice.audioId }.coerceAtLeast(0)]
+    val subtitles = if (disc.subtitleTracks.isEmpty()) null else {
+        val i = disc.subtitleTracks.indexOfFirst { it.id == choice.subtitleId }
+        if (i >= 0) subtitleLabels(disc.subtitleTracks)[i] else stringResource(R.string.subtitles_off)
+    }
+    return audio to subtitles
+}
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable

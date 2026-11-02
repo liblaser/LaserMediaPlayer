@@ -10,9 +10,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
-import java.net.URL
 import java.net.URLEncoder
-import java.security.MessageDigest
 import java.text.Normalizer
 import java.util.Locale
 import kotlin.math.abs
@@ -49,16 +47,13 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
     suspend fun find(disc: DiscInfo): FilmInfo? = withContext(Dispatchers.IO) {
         val language = language()
         val id = storeId(disc) + "-" + language
-        load(id, language)?.let {
-            Log.d(LASER_TAG, "film $id: known, ${it.getOrNull()?.title ?: "nothing found"}")
-            val film = it.getOrNull() ?: return@withContext null
-            if (film.poster != null || !settings.lookups.value.filmsOnline)
+        load(id, language)?.let { (film, posterUrl) ->
+            Log.d(LASER_TAG, "film $id: known, ${film?.title ?: "nothing found"}")
+            if (film == null || film.poster != null || posterUrl == null ||
+                !settings.lookups.value.filmsOnline)
                 return@withContext film
             /* Its poster could not be downloaded last time. */
-            val poster = storedPosterUrl(id)?.let { url ->
-                Tmdb.download(url, File(dir, "$id.jpg"))
-            }
-            return@withContext film.copy(poster = poster)
+            return@withContext film.copy(poster = Http.download(posterUrl, File(dir, "$id.jpg")))
         }
         val lookups = settings.lookups.value
         if (!lookups.filmsOnline) return@withContext null
@@ -74,7 +69,7 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
             save(id, null)
             return@withContext null
         }
-        val poster = match.posterUrl?.let { Tmdb.download(it, File(dir.apply { mkdirs() }, "$id.jpg")) }
+        val poster = match.posterUrl?.let { Http.download(it, File(dir.apply { mkdirs() }, "$id.jpg")) }
         val film = FilmInfo(match.title, match.year, poster, language, match.originalLanguage)
         save(id, film, match.posterUrl)
         film
@@ -126,54 +121,36 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
         }
     }
 
-    private fun storeId(disc: DiscInfo): String =
-        disc.discId ?: MessageDigest.getInstance("SHA-1").digest(disc.key.toByteArray())
-            .take(10).joinToString("") { "%02x".format(it) }
+    private fun storeId(disc: DiscInfo): String = disc.discId ?: shortHash(disc.key)
 
-    /** null: never looked up; a failed Result: looked up, nothing found. */
-    private fun load(id: String, language: String): Result<FilmInfo>? {
+    /** What is kept for a disc: its film - null if nothing was found - and
+     * its poster's address. */
+    private data class Stored(val film: FilmInfo?, val posterUrl: String?)
+
+    /** null: never looked up. */
+    private fun load(id: String, language: String): Stored? {
         val file = File(dir, "$id.json")
         if (!file.isFile) return null
         return try {
             val o = JSONObject(file.readText())
-            /* "Nothing found" by older rules: looked up again. */
-            if (o.optBoolean("none") && o.optInt("rules", 1) < RULES) null
-            else if (o.optBoolean("none")) Result.failure(NoSuchElementException())
-            /* Found before the original language was kept: looked up again. */
-            else if (!o.has("original")) null
-            /* Found by older matching rules, which could take a sequel of
-             * about the same length: looked up again, when it can be. */
-            else if (o.optInt("match", 1) < MATCH && settings.lookups.value.filmsOnline) null
-            /* Found without its poster before the poster's address was kept:
-             * looked up again, for the address. */
-            else if (!o.has("poster") && !File(dir, "$id.jpg").isFile &&
-                     settings.lookups.value.filmsOnline) null
-            else Result.success(FilmInfo(o.getString("title"),
-                                         o.optString("year").ifEmpty { null },
-                                         File(dir, "$id.jpg").takeIf { it.isFile }, language,
-                                         o.optString("original").ifEmpty { null }))
+            if (o.optBoolean("none")) Stored(null, null)
+            else Stored(FilmInfo(o.getString("title"),
+                                 o.optString("year").ifEmpty { null },
+                                 File(dir, "$id.jpg").takeIf { it.isFile }, language,
+                                 o.optString("original").ifEmpty { null }),
+                        o.optString("poster").ifEmpty { null })
         } catch (_: Exception) {
             null
         }
     }
 
-    /** The address of the poster of the film kept as [id], if it has one. */
-    private fun storedPosterUrl(id: String): String? = try {
-        JSONObject(File(dir, "$id.json").readText()).optString("poster").ifEmpty { null }
-    } catch (_: Exception) {
-        null
-    }
-
     private fun save(id: String, film: FilmInfo?, posterUrl: String? = null) {
-        val o = if (film == null) JSONObject().put("none", true).put("rules", RULES)
+        val o = if (film == null) JSONObject().put("none", true)
                 else JSONObject().put("title", film.title).put("year", film.year ?: "")
                     .put("original", film.originalLanguage ?: "")
-                    .put("poster", posterUrl ?: "").put("match", MATCH)
+                    .put("poster", posterUrl ?: "")
         try {
-            dir.mkdirs()
-            val tmp = File(dir, "$id.json.tmp")
-            tmp.writeText(o.toString())
-            if (!tmp.renameTo(File(dir, "$id.json"))) tmp.delete()
+            writeAtomically(File(dir, "$id.json"), o.toString())
         } catch (e: Exception) {
             Log.w(LASER_TAG, "cannot save film $id", e)
         }
@@ -203,12 +180,6 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
 
         private const val MAX_QUERIES = 3
         private val ARTICLES = setOf("THE", "AND", "LES", "DES", "UNE", "AUX", "DER", "DIE", "DAS")
-        /* Bumped when the lookup finds more: discs found by none of the
-         * earlier rules are looked up again. */
-        private const val RULES = 4
-        /* Bumped when the lookup matches better: films found by earlier
-         * rules are looked up again. */
-        private const val MATCH = 3
         /* A season in a title: S1, S02D3, SEASON 3, SAISON 1, SERIES 2... */
         private val SEASON = Regex(
             """(?i)[\s_.\-]+(?:S|SEASON|SAISON|SERIES|STAFFEL|TEMPORADA|STAGIONE)[\s_.\-]*(\d{1,2})(?=$|[\s_.\-]|D\d|DVD|DISC|DISK)""")
@@ -319,7 +290,6 @@ data class TmdbMatch(val title: String, val year: String?, val posterUrl: String
 object Tmdb {
     private const val API = "https://api.themoviedb.org/3"
     private const val IMAGES = "https://image.tmdb.org/t/p/w500"
-    private const val TIMEOUT_MS = 10_000
     private const val CANDIDATES = 5
     /* A running time this close to the disc's is the film: no need to look
      * further. */
@@ -430,25 +400,6 @@ object Tmdb {
                              phrase(show.optString("original_name"), query))
     }
 
-    fun download(url: String, dest: File): File? {
-        val tmp = File(dest.path + ".tmp")
-        return try {
-            val connection = open(url)
-            try {
-                if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
-                connection.inputStream.use { input -> tmp.outputStream().use { input.copyTo(it) } }
-            } finally {
-                connection.disconnect()
-            }
-            if (tmp.renameTo(dest)) dest else null
-        } catch (e: Exception) {
-            Log.w(LASER_TAG, "cannot fetch poster $url", e)
-            null
-        } finally {
-            tmp.delete()
-        }
-    }
-
     /** [title] has every word of [query], case and accents aside. */
     private fun holds(title: String, query: String): Boolean {
         val wanted = words(query)
@@ -475,7 +426,7 @@ object Tmdb {
      * be reached.
      */
     fun check(key: String): Boolean? = try {
-        val connection = open("$API/configuration?api_key=${enc(key)}")
+        val connection = Http.open("$API/configuration?api_key=${enc(key)}")
         try {
             when (connection.responseCode) {
                 HttpURLConnection.HTTP_OK -> true
@@ -493,8 +444,7 @@ object Tmdb {
      * logged, nor shown in an exception's message. */
     private fun get(url: String, key: String): String {
         val separator = if ('?' in url) '&' else '?'
-        val connection = open("$url${separator}api_key=${enc(key)}")
-        connection.setRequestProperty("Accept", "application/json")
+        val connection = Http.open("$url${separator}api_key=${enc(key)}", json = true)
         try {
             val code = connection.responseCode
             if (code != HttpURLConnection.HTTP_OK) throw IllegalStateException("TMDB: HTTP $code")
@@ -503,13 +453,6 @@ object Tmdb {
             connection.disconnect()
         }
     }
-
-    private fun open(url: String): HttpURLConnection =
-        (URL(url).openConnection() as HttpURLConnection).apply {
-            ExtraRoots.apply(this)
-            connectTimeout = TIMEOUT_MS
-            readTimeout = TIMEOUT_MS
-        }
 
     private fun enc(text: String): String = URLEncoder.encode(text, "UTF-8")
 }

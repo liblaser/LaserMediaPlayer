@@ -1,6 +1,5 @@
 package io.github.pierrebog.lasermediaplayer.ui.options
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,16 +8,9 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -47,10 +39,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.pierrebog.lasermediaplayer.R
 import io.github.pierrebog.lasermediaplayer.ui.FormFactor
+import io.github.pierrebog.lasermediaplayer.ui.home.SheetFrame
 import io.github.pierrebog.lasermediaplayer.ui.theme.BodyFamily
 import io.github.pierrebog.lasermediaplayer.ui.theme.LaserColors
 import io.github.pierrebog.lasermediaplayer.ui.theme.keyNavigation
-import io.github.pierrebog.lasermediaplayer.ui.theme.LaserType
 
 /**
  * Entering the TMDB key: a bottom sheet on a phone, a side panel on a TV,
@@ -65,41 +57,13 @@ fun BoxScope.KeySheet(
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    BackHandler(onBack = onDismiss)
     var text by rememberSaveable { mutableStateOf(current) }
     val field = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { field.requestFocus() } }
     val save = { if (text.isNotBlank()) onSave(text) }
-
-    Box(Modifier
-        .matchParentSize()
-        .background(LaserColors.Scrim)
-        .clickable(interactionSource = remember { MutableInteractionSource() },
-                   indication = null, onClick = onDismiss))
-
     val tv = form == FormFactor.TV
-    val panel = if (tv)
-        Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(520.dp)
-            .background(LaserColors.Sheet)
-    else
-        Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-            .background(LaserColors.Sheet)
 
-    Column(
-        modifier = panel
-            /* Swallows clicks, so that they do not reach the scrim. */
-            .clickable(interactionSource = remember { MutableInteractionSource() },
-                       indication = null, onClick = {})
-            .navigationBarsPadding()
-            .imePadding()
-            .padding(horizontal = if (tv) 32.dp else 20.dp, vertical = if (tv) 40.dp else 12.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
-    ) {
-        if (!tv)
-            Box(Modifier.align(Alignment.CenterHorizontally).size(40.dp, 4.dp)
-                .clip(RoundedCornerShape(2.dp)).background(LaserColors.Border))
-        Text(stringResource(R.string.tmdb_key), style = LaserType.SheetTitle)
+    SheetFrame(stringResource(R.string.tmdb_key), form, 520.dp, onDismiss) {
         OutlinedTextField(
             value = text,
             onValueChange = { text = it.trim() },

@@ -64,7 +64,7 @@ import io.github.pierrebog.lasermediaplayer.settings.AppSettings
 import io.github.pierrebog.lasermediaplayer.settings.KeyStatus
 import io.github.pierrebog.lasermediaplayer.settings.ThemeMode
 import io.github.pierrebog.lasermediaplayer.settings.TrackPref
-import io.github.pierrebog.lasermediaplayer.settings.languageNameInUi
+import io.github.pierrebog.lasermediaplayer.settings.languageName
 import io.github.pierrebog.lasermediaplayer.settings.trackLanguages
 import io.github.pierrebog.lasermediaplayer.storage.AacsKeys
 import io.github.pierrebog.lasermediaplayer.ui.FormFactor
@@ -599,5 +599,5 @@ private fun trackPrefLabel(value: String): String = when (value) {
     TrackPref.ORIGINAL -> stringResource(R.string.pref_original_language)
     TrackPref.INTERFACE -> stringResource(R.string.options_language)
     TrackPref.NONE -> stringResource(R.string.subtitles_off)
-    else -> languageNameInUi(value)
+    else -> languageName(value) ?: value
 }
