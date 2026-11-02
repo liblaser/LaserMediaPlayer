@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The debug build's disc: the release's (ic_launcher_foreground) with an
+     amber DEBUG band across its bottom, as in the design's variant B. The
+     lettering is Instrument Sans Bold, as paths. Its gradient needs Android 7
+     (API 24): before, the same picture as PNG, in drawable-*dpi. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillType="evenOdd"
+        android:pathData="M54,21a33,33 0,1 1,0 66a33,33 0,1 1,0 -66z M54,47.1a6.9,6.9 0,1 0,0 13.8a6.9,6.9 0,1 0,0 -13.8z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="30.9" android:startY="27.6"
+                android:endX="77.1" android:endY="80.4">
+                <item android:offset="0" android:color="#FFF1F3F5" />
+                <item android:offset="0.45" android:color="#FFA7AEB6" />
+                <item android:offset="0.6" android:color="#FFD3D8DD" />
+                <item android:offset="1" android:color="#FF7E868F" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#FF7B93FF"
+        android:pathData="M54,27.6A26.4,26.4 0,0 1,80.4 54L77.3,54A23.3,23.3 0,0 0,54 30.7Z" />
+    <path android:fillColor="#FFF5A524"
+        android:pathData="M23.5,66H84.5A2.5,2.5 0,0 1,87 68.5V76.5A2.5,2.5 0,0 1,84.5 79H23.5A2.5,2.5 0,0 1,21 76.5V68.5A2.5,2.5 0,0 1,23.5 66Z" />
+    <path android:fillColor="#FF101317"
+        android:pathData="M35.57 75.6V74.52H37.21Q37.91 74.52 38.4 74.24Q38.89 73.95 39.15 73.46Q39.41 72.96 39.41 72.32Q39.41 71.69 39.16 71.22Q38.9 70.74 38.41 70.47Q37.92 70.2 37.21 70.2H35.6V69.12H37.21Q38.3 69.12 39.11 69.51Q39.92 69.9 40.37 70.63Q40.81 71.35 40.81 72.34Q40.81 73.33 40.36 74.07Q39.91 74.8 39.11 75.2Q38.3 75.6 37.22 75.6ZM34.73 75.6V69.12H36.11V75.6ZM43.13 75.6V69.12H44.52V75.6ZM43.78 75.6V74.54H47.95V75.6ZM43.78 72.81V71.77H47.64V72.81ZM43.78 70.18V69.12H47.85V70.18ZM51.5 75.6V74.61H53.17Q53.62 74.61 53.85 74.36Q54.08 74.11 54.08 73.67Q54.08 73.22 53.83 72.96Q53.59 72.7 53.13 72.7H51.5V71.71H53.06Q53.48 71.71 53.7 71.51Q53.92 71.31 53.92 70.91Q53.92 70.52 53.71 70.31Q53.5 70.11 53.08 70.11H51.5V69.12H53.38Q54.24 69.12 54.77 69.56Q55.31 70 55.31 70.76Q55.31 71.23 55.08 71.58Q54.86 71.92 54.48 72.1Q54.1 72.28 53.63 72.28L53.68 72.09Q54.18 72.09 54.59 72.31Q55 72.52 55.24 72.91Q55.49 73.3 55.49 73.84Q55.49 74.37 55.24 74.77Q54.99 75.17 54.55 75.38Q54.1 75.6 53.5 75.6ZM50.37 75.6V69.12H51.75V75.6ZM60.5 75.69Q59.11 75.69 58.42 74.93Q57.73 74.17 57.73 72.71V69.12H59.12V72.95Q59.12 73.8 59.49 74.2Q59.86 74.59 60.51 74.59Q61.15 74.59 61.52 74.2Q61.89 73.8 61.89 72.96V69.12H63.28V72.73Q63.28 74.17 62.58 74.93Q61.89 75.69 60.5 75.69ZM68.91 75.69Q67.86 75.69 67.1 75.28Q66.34 74.86 65.94 74.11Q65.53 73.37 65.53 72.37Q65.53 71.38 65.94 70.63Q66.35 69.88 67.09 69.45Q67.82 69.03 68.79 69.03Q69.59 69.03 70.23 69.32Q70.86 69.61 71.25 70.11Q71.65 70.6 71.72 71.26H70.33Q70.24 70.73 69.83 70.43Q69.42 70.13 68.81 70.13Q68.24 70.13 67.82 70.39Q67.4 70.66 67.16 71.15Q66.93 71.65 66.93 72.34Q66.93 73.06 67.16 73.57Q67.4 74.08 67.85 74.34Q68.31 74.61 68.97 74.61Q69.51 74.61 69.89 74.47Q70.27 74.34 70.47 74.1L71.78 74.62Q71.26 75.14 70.57 75.42Q69.88 75.69 68.91 75.69ZM70.39 74.62V72.84L70.67 73.12H68.96V72.05H71.78V74.62Z" />
+</vector>
