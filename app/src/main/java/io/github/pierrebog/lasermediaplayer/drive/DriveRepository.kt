@@ -271,24 +271,13 @@ class DriveRepository(
             watchers[deviceName]?.isActive == true) return
         val fd = DriveConnections.fd(deviceName) ?: return
         watchers[deviceName] = scope.launch {
-            if (claims[deviceName] != fd) {
-                /* Recorded even if cancelled meanwhile, to be released: inside
-                 * the non-cancellable block, since leaving it throws at once
-                 * when the watch was cancelled during the acquire - the app
-                 * sent to the background, the drive unplugged - and a claim
-                 * recorded after it would be lost, the token never torn down. */
-                val claimed = withContext(NonCancellable) {
-                    withContext(Dispatchers.IO) { LaserDrive.acquire(fd) }
-                        .also { if (it) claims[deviceName] = fd }
-                }
-                if (!claimed) {
-                    /* Not an optical drive, or not answering: its connection
-                     * goes, and it is left alone. */
-                    Log.w(LASER_TAG, "$deviceName turned down, not followed")
-                    declined += deviceName
-                    closeWhenFree(deviceName)
-                    return@launch
-                }
+            if (!claim(deviceName, fd)) {
+                /* Not an optical drive, or not answering: its connection
+                 * goes, and it is left alone. */
+                Log.w(LASER_TAG, "$deviceName turned down, not followed")
+                declined += deviceName
+                closeWhenFree(deviceName)
+                return@launch
             }
             while (isActive) {
                 delay(POLL_INTERVAL)
@@ -308,6 +297,24 @@ class DriveRepository(
                 }
                 onMedia(deviceName, status)
             }
+        }
+    }
+
+    /**
+     * Takes the watch's claim on [deviceName]'s token [fd], if it does not
+     * hold it yet. False if liblaser turns the drive down.
+     *
+     * Recorded even if cancelled meanwhile, to be released: inside the
+     * non-cancellable block, since leaving it throws at once when the caller
+     * was cancelled during the acquire - the app sent to the background, the
+     * drive unplugged - and a claim recorded after it would be lost, the
+     * token never torn down.
+     */
+    private suspend fun claim(deviceName: String, fd: Int): Boolean {
+        if (claims[deviceName] == fd) return true
+        return withContext(NonCancellable) {
+            withContext(Dispatchers.IO) { LaserDrive.acquire(fd) }
+                .also { if (it) claims[deviceName] = fd }
         }
     }
 
@@ -447,6 +454,11 @@ class DriveRepository(
             quiet -= device.deviceName
             classifying = null
             if (device.deviceName in toClose) {
+                /* The claim taken for the watch goes first: unplugged while
+                 * it was taken, it was not there to be released. */
+                claims.remove(device.deviceName)?.let { fd ->
+                    withContext(NonCancellable + Dispatchers.IO) { LaserDrive.release(fd) }
+                }
                 closeWhenFree(device.deviceName)
                 closed = true
             }
@@ -503,6 +515,11 @@ class DriveRepository(
             Log.w(LASER_TAG, "could not open ${device.deviceName}")
             return DriveStatus.NoDisc
         }
+        /* The watch's claim first, so that the drive stays set up once the
+         * classification lets go of it: otherwise torn down, and set up
+         * again by the watch - an empty drive's wait for a disc run twice.
+         * Turned down, the drive is left to the watch, which says so. */
+        claim(device.deviceName, connection.fileDescriptor)
 
         val disc = when (val found = classifier.classify(connection.fileDescriptor, device.deviceName)) {
             is Classification.Disc -> found.disc
