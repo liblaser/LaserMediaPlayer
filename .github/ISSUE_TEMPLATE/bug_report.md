@@ -26,11 +26,11 @@ If applicable, add screenshots to help explain your problem.
 **Device (please complete the following information):**
  - Android Device: [e.g. Beelink GT1 TV Box Android]
  - OS: [e.g. Android 7.1]
- - Disc Device: [e.g. Hitachi-LG GP96]
- - Laser Media Player App Version [e.g. 0.1.0]
+ - Disc Reader Device: [e.g. Hitachi-LG GP96]
+ - Laser Media Player version: [e.g. 0.1.0]
 
 **Additional context**
 Add any other context about the problem here.
 
-If you had a crash or a hardware problem with your drive, resolutions chances will be greatly improved if you install the debug version of the application and provide a log
+If you had a crash or a hardware problem with your drive, resolutions chances will be greatly improved if you install the debug version of the application and provide a log.
 I recommend Logcat Extreme: https://play.google.com/store/apps/details?id=scd.lcex
