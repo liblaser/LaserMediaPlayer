@@ -16,7 +16,6 @@ import io.github.pierrebog.lasermediaplayer.settings.AppSettings
 import io.github.pierrebog.lasermediaplayer.vlc.AlbumLookup
 import io.github.pierrebog.lasermediaplayer.vlc.Classification
 import io.github.pierrebog.lasermediaplayer.vlc.DiscClassifier
-import io.github.pierrebog.lasermediaplayer.vlc.NoDiscReason
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -51,7 +50,7 @@ sealed interface DriveStatus {
     /** The tray is open. */
     data object TrayOpen : DriveStatus
 
-    /** The drive did not answer liblaser's wait: what it holds is unknown. */
+    /** The drive did not answer: what it holds is unknown. */
     data object NotResponding : DriveStatus
 
     data class Ready(val disc: DiscInfo) : DriveStatus
@@ -121,6 +120,9 @@ class DriveRepository(
     /** Drives classified again for that once already: not again, until a
      * disc is found or the drive reports a change. */
     private val wakeRetried = HashSet<String>()
+    /** Drives whose poll after a classification with nothing to play
+     * reported a new disc ([whyNoDisc]): classified again. */
+    private val arrived = HashSet<String>()
     /** Drives being classified with a disc already in: not polled meanwhile.
      * A poll waits for the drive between the classification's reads, and a
      * drive struggling with them - underpowered, a bad sector - can take
@@ -145,6 +147,7 @@ class DriveRepository(
                         val name = device.deviceName
                         _drives.update { list -> list.filter { it.deviceName != name } }
                         drain -= name
+                        arrived -= name
                         lastMedium -= name
                         declined -= name
                         /* The watch lets go of the token before the
@@ -485,12 +488,14 @@ class DriveRepository(
         if (status != DriveStatus.TrayOpen) drain += device.deviceName
         watch(device.deviceName)
         /* Nothing found, while the polls - which change nothing while a
-         * drive is identified - saw a disc arrive: a drive reporting the new
-         * disc before it has loaded it, which classification found absent.
-         * Classified once more; that time the medium is present from the
-         * start, so a data disc is not classified again and again. */
-        if (status == DriveStatus.NoDisc && mediumBefore != LaserDrive.Medium.PRESENT &&
-            lastMedium[name] == LaserDrive.Medium.PRESENT) {
+         * drive is identified, and the one asking why there was nothing -
+         * saw a disc arrive: a drive reporting the new disc before it has
+         * loaded it, which classification found absent. Classified once
+         * more; that time the medium is present from the start, so a data
+         * disc is not classified again and again. */
+        val newDisc = arrived.remove(name)
+        if (status == DriveStatus.NoDisc && (newDisc || (mediumBefore != LaserDrive.Medium.PRESENT &&
+            lastMedium[name] == LaserDrive.Medium.PRESENT))) {
             Log.i(LASER_TAG, "$name: a disc arrived while it was classified, classifying it again")
             reclassify(name)
             return
@@ -523,11 +528,9 @@ class DriveRepository(
 
         val disc = when (val found = classifier.classify(connection.fileDescriptor, device.deviceName)) {
             is Classification.Disc -> found.disc
-            is Classification.NoDisc -> return when (found.reason) {
-                NoDiscReason.TRAY_OPEN -> DriveStatus.TrayOpen
-                NoDiscReason.NOT_READY -> DriveStatus.NotResponding
-                NoDiscReason.NO_MEDIUM, NoDiscReason.UNRECOGNISED -> DriveStatus.NoDisc
-            }
+            Classification.NoDisc ->
+                return whyNoDisc(device.deviceName, connection.fileDescriptor)
+            Classification.Unopened -> return DriveStatus.NotResponding
             /* The drive kept the browse busy past its minute: as good as
              * silent. */
             Classification.TimedOut -> return DriveStatus.NotResponding
@@ -542,6 +545,22 @@ class DriveRepository(
             DiscKind.VIDEO_CD -> DriveStatus.Ready(disc.copy(lookupDone = true))
             else -> DriveStatus.Ready(disc)
         }
+    }
+
+    /**
+     * Why [deviceName], classified, has nothing to play: asked of the drive
+     * itself, under the watch's claim, by the poll the watch makes. Its tray
+     * open, or no answer; else no disc - an empty drive, a data disc, or a
+     * drive that has not become ready, whose disc is reported once loaded.
+     * A new disc reported meanwhile is classified again by the caller; the
+     * rest of what the poll reports changes nothing for a drive without a
+     * disc to play.
+     */
+    private suspend fun whyNoDisc(deviceName: String, fd: Int): DriveStatus {
+        val status = withContext(Dispatchers.IO) { LaserDrive.poll(fd) }
+            ?: return DriveStatus.NotResponding
+        if (status.event == LaserDrive.Event.NEW) arrived += deviceName
+        return if (status.trayOpen) DriveStatus.TrayOpen else DriveStatus.NoDisc
     }
 
     /**

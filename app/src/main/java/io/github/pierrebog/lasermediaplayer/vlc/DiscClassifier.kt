@@ -8,21 +8,16 @@ import io.github.pierrebog.lasermediaplayer.disc.TrackLists
 import kotlin.time.Duration.Companion.seconds
 import org.videolan.libvlc.interfaces.IMedia
 
-/** Why a drive has no disc to show, as laser.c says it. */
-enum class NoDiscReason {
-    /** Empty, tray closed - or a disc the drive could not read. */
-    NO_MEDIUM,
-    TRAY_OPEN,
-    /** The drive did not become ready, nor said why. */
-    NOT_READY,
-    /** A disc, but none of the kinds played here: a data disc. */
-    UNRECOGNISED,
-}
-
 /** What a classification found. */
 sealed interface Classification {
     data class Disc(val disc: DiscInfo) : Classification
-    data class NoDisc(val reason: NoDiscReason) : Classification
+    /** Nothing to play: an empty drive, an open tray, a drive that did not
+     * become ready, a data disc. laser.c does not say which: the drive does
+     * ([io.github.pierrebog.lasermediaplayer.drive.LaserDrive.poll]). */
+    data object NoDisc : Classification
+    /** laser.c could not open the drive: its claim refused, the device gone,
+     * or not an optical drive. */
+    data object Unopened : Classification
     /** The browse did not end in time. */
     data object TimedOut : Classification
 }
@@ -44,9 +39,8 @@ class DiscClassifier(engine: VlcEngine) {
     /**
      * @param fd an opened, permission-granted USB descriptor, owned by the
      *           caller and kept open until this returns
-     * @return the disc; or why there is none - a device that is not an
-     *         optical drive, which laser.c refuses, says nothing and counts
-     *         as unrecognised; or a browse that timed out
+     * @return the disc; or nothing to play; or a drive laser.c could not
+     *         open; or a browse that timed out
      */
     suspend fun classify(fd: Int, deviceName: String): Classification =
         when (val parsed = parser.parse(LaserMrl.classification(fd), emptyList(),
@@ -62,33 +56,23 @@ class DiscClassifier(engine: VlcEngine) {
                 Log.w(LASER_TAG, "classification of $deviceName timed out")
                 Classification.TimedOut
             }
-            /* laser.c could not open the drive: its claim refused, the device
-             * gone, or not an optical drive. */
             Parsed.Failed -> {
                 Log.w(LASER_TAG, "classification of $deviceName failed to open the drive")
-                Classification.NoDisc(NoDiscReason.NOT_READY)
+                Classification.Unopened
             }
         }
 
     private fun discOf(medias: List<IMedia>, deviceName: String): Classification {
-        /* Nothing to play: laser.c's one row saying why. */
-        medias.firstNotNullOfOrNull { it.getMetaExtra(STATE_META) }?.let { state ->
-            Log.d(LASER_TAG, "$deviceName: no disc ($state)")
-            return Classification.NoDisc(when (state) {
-                "no-medium" -> NoDiscReason.NO_MEDIUM
-                "tray-open" -> NoDiscReason.TRAY_OPEN
-                "not-ready" -> NoDiscReason.NOT_READY
-                else -> NoDiscReason.UNRECOGNISED
-            })
-        }
-
         val rows = medias.mapNotNull { media ->
             val mrl = media.uri?.toString() ?: return@mapNotNull null
             LaserMrl.rowOf(mrl).also {
                 if (it == null) Log.w(LASER_TAG, "unexpected row MRL '$mrl', ignored")
             }
         }
-        if (rows.isEmpty()) return Classification.NoDisc(NoDiscReason.UNRECOGNISED)
+        if (rows.isEmpty()) {
+            Log.d(LASER_TAG, "$deviceName: nothing to play")
+            return Classification.NoDisc
+        }
 
         for (media in medias) {
             Log.d(LASER_TAG, "row ${media.uri}: audio=${media.getMetaExtra(TrackLists.AUDIO_META)
@@ -146,8 +130,5 @@ class DiscClassifier(engine: VlcEngine) {
         /* Set by laser.c on a Blu-ray row: "1" if AACS-protected, "0" if
          * not. */
         const val AACS_META = "laser-aacs"
-        /* Set by laser.c on its one row when there is no disc to play: why -
-         * "no-medium", "tray-open", "not-ready" or "unrecognised". */
-        const val STATE_META = "laser-state"
     }
 }
