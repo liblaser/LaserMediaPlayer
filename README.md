@@ -4,6 +4,12 @@ Plays audio CDs, Video CDs, DVD-Video, DVD-Audio and Blu-ray discs from a USB
 optical drive, on Android (6.0 or later) phones, boxes and Android TV, through
 libVLC 4 and liblaser.
 
+## Screenshots
+<img src="https://i.postimg.cc/p2zYsRNp/Screenshot-20261106-213903.png" alt="cdda detection" width="300" />
+<img src="https://i.postimg.cc/pWvQ74xx/Screenshot-20261106-213921.png" alt="cdda playback" width="300" />
+<img src="https://i.postimg.cc/B45p02Mt/Screenshot-20261106-220835.png" alt="blu-ray detection" width="300" />
+<img src="https://i.postimg.cc/HYm0KRHW/Screenshot-20261106-214500.png" alt="blu-ray playback" width="300" />
+
 ## User's manual
 
 ### Playing a disc
@@ -133,6 +139,5 @@ For the Blu-ray menus, the APK carries a Java runtime per ABI
 (`app/src/main/assets/bdj/jre8-<abi>.zip`): the Android port of OpenJDK 8
 (GPLv2 with the Classpath Exception) built at
 https://github.com/AngelAuraMC/angelauramc-openjdk-build/commit/62359f04413c3ffe339e652b88a96d9087840cbf,
-prepared by `bdj-jre-tools/prepare-bdj-jre.sh` - which also builds the
-FreeType it adds (FreeType License or GPLv2) - and libbluray's BD-J jars
+prepared by `bdj-jre-tools/prepare-bdj-jre.sh` and libbluray's BD-J jars
 (LGPLv2.1 or later).
