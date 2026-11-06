@@ -4,6 +4,12 @@ Plays audio CDs, Video CDs, DVD-Video, DVD-Audio and Blu-ray discs from a USB
 optical drive, on Android (6.0 or later) phones, boxes and Android TV, through
 libVLC 4 and liblaser.
 
+> **Legal notice:** Laser Media Player is meant to play physical discs **you own**. 
+> Handling copy-protected discs (CSS / AACS) may be restricted by law where you live, 
+> please check them before using this application.
+> If you want to watch commercial Blu-ray discs, you must provide your own AACS 
+> decryption library and decryption keys files since neither are provided by this project.
+
 ## Screenshots
 <table>
   <tr>
