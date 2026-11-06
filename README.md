@@ -5,10 +5,16 @@ optical drive, on Android (6.0 or later) phones, boxes and Android TV, through
 libVLC 4 and liblaser.
 
 ## Screenshots
-<img src="https://i.postimg.cc/p2zYsRNp/Screenshot-20261106-213903.png" alt="cdda detection" width="300" />
-<img src="https://i.postimg.cc/pWvQ74xx/Screenshot-20261106-213921.png" alt="cdda playback" width="300" />
-<img src="https://i.postimg.cc/B45p02Mt/Screenshot-20261106-220835.png" alt="blu-ray detection" width="300" />
-<img src="https://i.postimg.cc/HYm0KRHW/Screenshot-20261106-214500.png" alt="blu-ray playback" width="300" />
+<table>
+  <tr>
+    <td><img src="https://i.postimg.cc/p2zYsRNp/Screenshot-20261106-213903.png" alt="cdda detection" width="400" /></td>
+    <td><img src="https://i.postimg.cc/pWvQ74xx/Screenshot-20261106-213921.png" alt="cdda playback" width="400" /></td>
+  </tr>
+  <tr>
+    <td><img src="https://i.postimg.cc/B45p02Mt/Screenshot-20261106-220835.png" alt="blu-ray detection" width="400" /></td>
+    <td><img src="https://i.postimg.cc/HYm0KRHW/Screenshot-20261106-214500.png" alt="blu-ray playback" width="400" /></td>
+  </tr>
+</table>
 
 ## User's manual
 
