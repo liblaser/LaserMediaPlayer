@@ -175,7 +175,10 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
 
         val device = UsbDrives.byName(app, deviceName)
         val connection = device?.let { DriveConnections.open(app, it) }
+        /* From the title asked for, else the demuxer's own start: the
+         * row's "#title" is for a player that does not choose. */
         val mrl = connection?.let { LaserMrl.withFd(request.row.mrl, it.fileDescriptor) }
+            ?.let { LaserMrl.withTitle(it, request.startTitle) }
         if (mrl == null) {
             Log.w(LASER_TAG, "cannot open $deviceName for playback")
             _state.update { it.copy(error = true) }
@@ -656,9 +659,8 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         if (resumeApplied) return
         val point = request.resume
         if (point == null) {
+            /* The version chosen started from the MRL: see start(). */
             resumeApplied = true
-            /* The version chosen, when not the demuxer's first title. */
-            request.startTitle?.takeIf { it != player.title }?.let { player.title = it }
             return
         }
         if (kind == DiscKind.CD_AUDIO) {

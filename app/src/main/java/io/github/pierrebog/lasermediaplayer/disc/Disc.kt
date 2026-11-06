@@ -8,7 +8,9 @@ import java.io.File
  *
  * Every row MRL ends with the descriptor of the CLASSIFICATION connection,
  * which is closed by the time anyone reads it: playback opens a connection
- * of its own and substitutes its descriptor through [LaserMrl.withFd].
+ * of its own and substitutes its descriptor through [LaserMrl.withFd]. A
+ * DVD's row without menus may add "#title", where it starts: see
+ * [LaserMrl.withTitle].
  */
 
 enum class DiscKind {
@@ -135,10 +137,11 @@ data class DiscInfo(
     val discId: String? = null,
     /** The main title's length, from laser.c; 0 if unknown. */
     val mainLengthMs: Long = 0,
-    /** A DVD's main title, from laser.c: its number in the disc's title
-     * table, from 1, as dvdread numbers its titles; null if unknown. Where
-     * playback without the menus starts, rather than the disc's first title -
-     * a warning, a trailer, or on some discs a decoy. */
+    /** A DVD's main title, from laser.c - the "#title" of its row without
+     * menus: its number in the disc's title table, from 1, as dvdread
+     * numbers its titles; null if unknown. Where playback without the menus
+     * starts, rather than the disc's first title - a warning, a trailer, or
+     * on some discs a decoy. */
     val mainTitle: Int? = null,
     /** A Blu-ray's AACS protection, from laser.c; null if unknown. */
     val aacs: Boolean? = null,
@@ -198,11 +201,30 @@ object LaserMrl {
     private const val ACCESS = "laser"
 
     /** [mrl] with its trailing descriptor replaced by [fd], or null if it
-     * does not end in one. */
+     * does not end in one. Its "#title", if any, is kept. */
     fun withFd(mrl: String, fd: Int): String? {
-        val prefix = mrl.dropLastWhile { it.isDigit() }
-        if (prefix.length == mrl.length) return null
-        return "$prefix$fd"
+        val (base, anchor) = split(mrl)
+        val prefix = base.dropLastWhile { it.isDigit() }
+        if (prefix.length == base.length) return null
+        return "$prefix$fd$anchor"
+    }
+
+    /** [mrl] starting at [title], or at the demuxer's own start if null:
+     * the "#title" VLC reads at the end of any MRL, numbered as the demuxer
+     * numbers its titles - from 1 with dvdread. Replaces the one [mrl] may
+     * already end with. */
+    fun withTitle(mrl: String, title: Int?): String {
+        val base = split(mrl).first
+        return if (title != null) "$base#$title" else base
+    }
+
+    /** The title [mrl] starts at (see [withTitle]), or null. */
+    fun titleOf(mrl: String): Int? = split(mrl).second.removePrefix("#").toIntOrNull()
+
+    /** [mrl] before its "#", and from it - empty if there is none. */
+    private fun split(mrl: String): Pair<String, String> {
+        val i = mrl.indexOf('#')
+        return if (i < 0) mrl to "" else mrl.substring(0, i) to mrl.substring(i)
     }
 
     /** The classification MRL laser.c's OpenDir() answers to. */
@@ -219,7 +241,7 @@ object LaserMrl {
             mrl.startsWith("svcd://$ACCESS/") -> DiscKind.VIDEO_CD to PlayMode.DIRECT
             else -> return null
         }
-        if (!mrl.last().isDigit()) return null
+        if (split(mrl).first.lastOrNull()?.isDigit() != true) return null
         return DiscRow(mrl, kind, mode)
     }
 }

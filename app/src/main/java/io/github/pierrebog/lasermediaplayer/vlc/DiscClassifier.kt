@@ -3,7 +3,9 @@ package io.github.pierrebog.lasermediaplayer.vlc
 import android.util.Log
 import io.github.pierrebog.lasermediaplayer.LASER_TAG
 import io.github.pierrebog.lasermediaplayer.disc.DiscInfo
+import io.github.pierrebog.lasermediaplayer.disc.DiscKind
 import io.github.pierrebog.lasermediaplayer.disc.LaserMrl
+import io.github.pierrebog.lasermediaplayer.disc.PlayMode
 import io.github.pierrebog.lasermediaplayer.disc.TrackLists
 import kotlin.time.Duration.Companion.seconds
 import org.videolan.libvlc.interfaces.IMedia
@@ -43,7 +45,7 @@ class DiscClassifier(engine: VlcEngine) {
      *         open; or a browse that timed out
      */
     suspend fun classify(fd: Int, deviceName: String): Classification =
-        when (val parsed = parser.parse(LaserMrl.classification(fd), emptyList(),
+        when (val parsed = parser.parse(LaserMrl.classification(fd), listOf(METADATA_OPTION),
                                         CLASSIFY_TIMEOUT_MS, SAFETY_TIMEOUT) { discOf(it, deviceName) }) {
             is Parsed.Done -> parsed.value
             /* libVLC's own timeout interrupts the parse and ends it; the
@@ -77,8 +79,7 @@ class DiscClassifier(engine: VlcEngine) {
         for (media in medias) {
             Log.d(LASER_TAG, "row ${media.uri}: audio=${media.getMetaExtra(TrackLists.AUDIO_META)
                 ?.replace('\n', '|')} spu=${media.getMetaExtra(TrackLists.SPU_META)?.replace('\n', '|')}" +
-                " id=${media.getMetaExtra(DISC_ID_META)} length=${media.getMetaExtra(MAIN_LENGTH_META)}" +
-                " main=${media.getMetaExtra(MAIN_TITLE_META)}" +
+                " id=${media.getMetaExtra(DISC_ID_META)} length=${media.duration}" +
                 " dvda=${media.getMetaExtra(DVDA_TRACKS_META)?.replace('\n', '|')}" +
                 " aacs=${media.getMetaExtra(AACS_META)}" +
                 " versions=${media.getMetaExtra(TrackLists.VERSIONS_META)?.replace('\n', '|')}")
@@ -96,10 +97,12 @@ class DiscClassifier(engine: VlcEngine) {
             versions = TrackLists.parseVersions(video?.getMetaExtra(TrackLists.VERSIONS_META)),
             variants = TrackLists.parseVariants(video?.getMetaExtra(TrackLists.VERSIONS_META)),
             discId = medias.firstNotNullOfOrNull { it.getMetaExtra(DISC_ID_META) },
-            mainLengthMs = medias.firstNotNullOfOrNull { it.getMetaExtra(MAIN_LENGTH_META) }
-                ?.toLongOrNull() ?: 0,
-            mainTitle = medias.firstNotNullOfOrNull { it.getMetaExtra(MAIN_TITLE_META) }
-                ?.toIntOrNull()?.takeIf { it >= 1 },
+            mainLengthMs = medias.firstNotNullOfOrNull { media ->
+                media.duration.takeIf { it > 0 } } ?: 0,
+            /* The "#title" laser.c ends the row without menus with. */
+            mainTitle = rows.firstOrNull { it.kind == DiscKind.DVD_VIDEO &&
+                                           it.mode == PlayMode.NO_MENUS }
+                ?.let { LaserMrl.titleOf(it.mrl) }?.takeIf { it >= 1 },
             dvdaTracks = medias.firstNotNullOfOrNull { it.getMetaExtra(DVDA_TRACKS_META) }
                 .orEmpty().lineSequence().mapNotNull { it.trim().toLongOrNull() }.toList(),
             aacs = when (medias.firstNotNullOfOrNull { it.getMetaExtra(AACS_META) }) {
@@ -111,19 +114,17 @@ class DiscClassifier(engine: VlcEngine) {
     }
 
     private companion object {
+        /* laser.c reads what follows only when asked. */
+        const val METADATA_OPTION = ":laser-metadata"
         /* A Blu-ray reads every playlist and starts libaacs: generous.
          * libVLC's, in milliseconds. */
         const val CLASSIFY_TIMEOUT_MS = 60_000
         /* In case libVLC never ends the parse: past its own timeout, and
          * past liblaser's longest wait, which no interrupt cuts short. */
         val SAFETY_TIMEOUT = 90.seconds
-        /* Set by laser.c: the DVD's, Blu-ray's or Video CD's disc ID, and
-         * the main title's length in milliseconds. */
+        /* Set by laser.c: the DVD's, Blu-ray's or Video CD's disc ID. The
+         * main title's length is the item's duration. */
         const val DISC_ID_META = "laser-disc-id"
-        const val MAIN_LENGTH_META = "laser-main-length"
-        /* Set by laser.c on a DVD's video rows: the main title's number,
-         * from 1. */
-        const val MAIN_TITLE_META = "laser-main-title"
         /* Set by laser.c on a DVD-Audio row: its tracks' lengths in
          * milliseconds, one per line. */
         const val DVDA_TRACKS_META = "laser-dvda-tracks"

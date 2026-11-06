@@ -34,7 +34,8 @@ data class PlaybackRequest(
     /** Where to start, or null for the start (or the menus). */
     val resume: ResumePoint?,
     val tracks: TrackChoice,
-    /** The libVLC title to start, from 0: the version chosen, or the main
+    /** The title to start, as the MRL gives it (see LaserMrl.withTitle) -
+     * from 1, as dvdread numbers its titles: the version chosen, or the main
      * title, played without the menus. Null for the demuxer's own start. */
     val startTitle: Int? = null,
 )
@@ -197,7 +198,6 @@ class HomeViewModel(private val app: LaserApp) : ViewModel() {
                                   state.tracks.audioId, state.tracks.subtitleId)
         val startTitle = ((variant ?: state.version)?.title ?: disc.mainTitle)
             ?.takeIf { resume == null && row.kind == DiscKind.DVD_VIDEO && row.mode == PlayMode.NO_MENUS }
-            ?.let { it - 1 }
         return PlaybackRequest(disc, row, options, resume, state.tracks, startTitle)
     }
 
