@@ -649,9 +649,5 @@ class DriveRepository(
     }
 
     private fun UsbDevice.label(): String =
-        listOfNotNull(manufacturerName?.trim(), productName?.trim())
-            .filter { it.isNotEmpty() }
-            .distinct()
-            .joinToString(" ")
-            .ifEmpty { "USB" }
+        productName?.trim()?.ifEmpty { null } ?: "USB"
 }
