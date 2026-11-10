@@ -165,6 +165,17 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
     /* Playback started once: a later error is not the disc failing to open. */
     private var playedOnce = false
 
+    /* A DVD without its menus: dvdread plays the title asked for - the
+     * version chosen, the main title, the title resumed - then goes on to
+     * the next ones: extras, trailers, a protection's decoys. Playback stops
+     * when it leaves that title, once reached. Numbered as libVLC numbers
+     * them, from 0; -1 when unknown, and dvdread goes on. */
+    private val titleToPlay =
+        if (kind != DiscKind.DVD_VIDEO || request.row.mode != PlayMode.NO_MENUS) -1
+        else request.resume?.title?.takeIf { it >= 0 }
+            ?: request.startTitle?.let { it - 1 } ?: -1
+    private var titleReached = false
+
     /**
      * Opens the drive and starts playback, into [layout] for a video, or
      * without any for the audio screen.
@@ -506,6 +517,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
             }
             MediaPlayer.Event.Paused -> _state.update { it.copy(playing = false) }
             MediaPlayer.Event.TimeChanged -> {
+                if (leftTitle()) return
                 refreshChaptersOfTitle()
                 onTime(event.timeChanged)
                 applyPendingResume()
@@ -521,6 +533,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
                 noteVersion()
             }
             MediaPlayer.Event.ESAdded, MediaPlayer.Event.ESSelected -> {
+                if (leftTitle()) return
                 /* A DVD title change shows as new ES: the menu may have gone,
                  * and the chapters are the new title's. */
                 refreshChaptersOfTitle()
@@ -553,6 +566,28 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
             }
             MediaPlayer.Event.Stopped -> _state.update { it.copy(playing = false) }
         }
+    }
+
+    /**
+     * Whether playback has left [titleToPlay], once reached: then it is
+     * played to its end, as EndReached would say - the screen leaves, and
+     * stops libVLC before the next title has played more than a moment.
+     */
+    private fun leftTitle(): Boolean {
+        if (titleToPlay < 0 || finished || closing) return false
+        if (_state.value.ended) return true
+        val title = player.title
+        if (title == titleToPlay) {
+            titleReached = true
+            return false
+        }
+        if (!titleReached || title < 0) return false
+        Log.d(LASER_TAG, "title $titleToPlay played, not going on to title $title")
+        player.pause()
+        request.disc.let { app.resume.savePoint(it, ResumePoint(-1, 0, 0)) }
+        playedVersion?.let { app.resume.savePoint(request.disc, ResumePoint(-1, 0, 0), it) }
+        _state.update { it.copy(playing = false, ended = true) }
+        return true
     }
 
     private fun finish() {
