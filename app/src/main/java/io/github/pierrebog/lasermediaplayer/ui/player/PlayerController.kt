@@ -506,6 +506,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
             }
             MediaPlayer.Event.Paused -> _state.update { it.copy(playing = false) }
             MediaPlayer.Event.TimeChanged -> {
+                refreshChaptersOfTitle()
                 onTime(event.timeChanged)
                 applyPendingResume()
                 /* The video track's size may be known only once its first
@@ -520,7 +521,9 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
                 noteVersion()
             }
             MediaPlayer.Event.ESAdded, MediaPlayer.Event.ESSelected -> {
-                /* A DVD title change shows as new ES: the menu may have gone. */
+                /* A DVD title change shows as new ES: the menu may have gone,
+                 * and the chapters are the new title's. */
+                refreshChaptersOfTitle()
                 refreshMenuState()
                 applyTracks()
                 applyChannel()
@@ -567,7 +570,21 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
 
     /* ---- chapters ---------------------------------------------------------- */
 
+    /* The title the chapters are of; -1 before any. */
+    private var chaptersTitle = -1
+
+    /**
+     * The chapters again if the title changed since they were read: a title
+     * change brings no LengthChanged when the new title is as long as the
+     * old one - dvdread opening on the first title, then going to the main
+     * title, as long as the decoys before it on a protected disc.
+     */
+    private fun refreshChaptersOfTitle() {
+        if (chaptersTitle >= 0 && player.title != chaptersTitle) refreshChapters()
+    }
+
     private fun refreshChapters() {
+        chaptersTitle = player.title
         val chapters = player.getChapters(-1)
             ?.map { ChapterMark(it.timeOffset, it.duration, it.name?.takeIf(String::isNotBlank)) }
             .orEmpty()
