@@ -112,6 +112,9 @@ class DriveRepository(
      * not reveal: not followed, so that its kernel driver, given back, is not
      * taken again at every return to the foreground. Until unplugged. */
     private val declined = HashSet<String>()
+    /** Devices liblaser found to be no optical drive: left out of the list,
+     * and not offered to classification again, until unplugged. */
+    private val notDrives = HashSet<String>()
     /** Drives that did not answer their classification: most likely still
      * waking - a drive behind a slow bridge may answer nothing for longer
      * than liblaser waits. Classified once more as soon as a poll gets an
@@ -150,6 +153,7 @@ class DriveRepository(
                         arrived -= name
                         lastMedium -= name
                         declined -= name
+                        notDrives -= name
                         /* The watch lets go of the token before the
                          * descriptor goes. */
                         val watcher = watchers.remove(name)
@@ -274,7 +278,7 @@ class DriveRepository(
             watchers[deviceName]?.isActive == true) return
         val fd = DriveConnections.fd(deviceName) ?: return
         watchers[deviceName] = scope.launch {
-            if (!claim(deviceName, fd)) {
+            if (claim(deviceName, fd) != LaserDrive.Claim.OK) {
                 /* Not an optical drive, or not answering: its connection
                  * goes, and it is left alone. */
                 Log.w(LASER_TAG, "$deviceName turned down, not followed")
@@ -305,7 +309,8 @@ class DriveRepository(
 
     /**
      * Takes the watch's claim on [deviceName]'s token [fd], if it does not
-     * hold it yet. False if liblaser turns the drive down.
+     * hold it yet. Anything but [LaserDrive.Claim.OK] if liblaser turns the
+     * drive down.
      *
      * Recorded even if cancelled meanwhile, to be released: inside the
      * non-cancellable block, since leaving it throws at once when the caller
@@ -313,11 +318,11 @@ class DriveRepository(
      * drive unplugged - and a claim recorded after it would be lost, the
      * token never torn down.
      */
-    private suspend fun claim(deviceName: String, fd: Int): Boolean {
-        if (claims[deviceName] == fd) return true
+    private suspend fun claim(deviceName: String, fd: Int): LaserDrive.Claim {
+        if (claims[deviceName] == fd) return LaserDrive.Claim.OK
         return withContext(NonCancellable) {
-            withContext(Dispatchers.IO) { LaserDrive.acquire(fd) }
-                .also { if (it) claims[deviceName] = fd }
+            withContext(Dispatchers.IO) { LaserDrive.claim(fd) }
+                .also { if (it == LaserDrive.Claim.OK) claims[deviceName] = fd }
         }
     }
 
@@ -417,6 +422,7 @@ class DriveRepository(
 
     private suspend fun pass(all: Boolean) {
         val devices = withContext(Dispatchers.IO) { UsbDrives.candidates(appContext) }
+            .filter { it.deviceName !in notDrives }
         val previous = _drives.value.associateBy { it.deviceName }
 
         /* Drives that left the bus go; new ones appear as Identifying. */
@@ -467,6 +473,16 @@ class DriveRepository(
             }
         }
         val name = device.deviceName
+        /* No optical drive: out of the list, its connection gone. */
+        if (status == null) {
+            Log.i(LASER_TAG, "$name is no optical drive, left out")
+            notDrives += name
+            declined += name
+            waking -= name
+            _drives.update { list -> list.filter { it.deviceName != name } }
+            if (!closed) closeWhenFree(name)
+            return
+        }
         if (closed) {
             setStatus(name, status)
             return
@@ -509,8 +525,8 @@ class DriveRepository(
         }
     }
 
-    /** What [device] holds. */
-    private suspend fun classify(device: UsbDevice): DriveStatus {
+    /** What [device] holds; null if it is no optical drive. */
+    private suspend fun classify(device: UsbDevice): DriveStatus? {
         if (!UsbDrives.requestPermission(appContext, device)) return DriveStatus.PermissionDenied
 
         /* Kept open: the drive's one connection (see DriveConnections). */
@@ -523,8 +539,10 @@ class DriveRepository(
         /* The watch's claim first, so that the drive stays set up once the
          * classification lets go of it: otherwise torn down, and set up
          * again by the watch - an empty drive's wait for a disc run twice.
-         * Turned down, the drive is left to the watch, which says so. */
-        claim(device.deviceName, connection.fileDescriptor)
+         * No optical drive, the device is not classified at all; turned
+         * down otherwise, it is left to the watch, which says so. */
+        if (claim(device.deviceName, connection.fileDescriptor) == LaserDrive.Claim.NOT_OPTICAL)
+            return null
 
         val disc = when (val found = classifier.classify(connection.fileDescriptor, device.deviceName)) {
             is Classification.Disc -> found.disc

@@ -27,11 +27,29 @@ object LaserDrive {
 
     data class MediaStatus(val event: Event, val trayOpen: Boolean, val medium: Medium)
 
+    /** How [claim] went. */
+    enum class Claim {
+        /** Claimed: to be paired with [release]. */
+        OK,
+        /** No optical drive - a card reader, a USB key: the device's own
+         * answer, the same at every claim (LASER_ERR_NOT_OPTICAL). */
+        NOT_OPTICAL,
+        /** Not set up: a drive not answering, among others. */
+        FAILED,
+    }
+
     /**
      * A claim on [fd], which keeps the drive set up between [poll]s - else
-     * each would set it up again. Paired with [release].
+     * each would set it up again. Paired with [release] when [Claim.OK].
      */
-    fun acquire(fd: Int): Boolean = nativeAcquire(fd) == 0
+    fun claim(fd: Int): Claim = when (nativeAcquire(fd)) {
+        0 -> Claim.OK
+        LASER_ERR_NOT_OPTICAL -> Claim.NOT_OPTICAL
+        else -> Claim.FAILED
+    }
+
+    /** [claim], whatever the reason it failed. */
+    fun acquire(fd: Int): Boolean = claim(fd) == Claim.OK
 
     fun release(fd: Int) = nativeRelease(fd)
 
@@ -53,6 +71,9 @@ object LaserDrive {
 
     /** Opens the tray; it must be unlocked. */
     fun eject(fd: Int): Boolean = nativeEject(fd) == 0
+
+    /* laser.h's laser_status_t. */
+    private const val LASER_ERR_NOT_OPTICAL = -11
 
     @JvmStatic private external fun nativeAcquire(fd: Int): Int
     @JvmStatic private external fun nativeRelease(fd: Int)
