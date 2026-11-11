@@ -18,10 +18,12 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,9 +40,14 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -368,6 +375,8 @@ private fun DiscPanel(
                     ?: disc.dvdaTracks.sum()
                 ResumeProgress(state.resume?.timeMs ?: 0, length, byline, metrics.textSize)
             }
+            /* Above the ways of playing it: what may get in their way. */
+            DiscWarnings(disc, form)
             val tv = form == FormFactor.TV
             val gap = if (tv) 12.dp else 10.dp
             val playButton: @Composable (Int, PlayAction) -> Unit = { i, action ->
@@ -500,6 +509,57 @@ private fun DiscPanel(
                 Box(Modifier.weight(1f).verticalScroll(rememberScrollState())) { details() }
             }
         }
+    }
+}
+
+/* The warnings' amber: the icons, and the box's edge and ground. */
+private val WarningAccent = Color(0xFFF5A524)
+
+/**
+ * A DVD's warnings, in one box, a line each, or nothing: a disc with decoys,
+ * which the menus avoid for sure where playing without them may not; a disc
+ * the drive's region forbids, which still plays, slower to start.
+ */
+@Composable
+private fun DiscWarnings(disc: DiscInfo, form: FormFactor) {
+    val region = disc.region
+    if (!disc.decoys && region == null) return
+    val tv = form == FormFactor.TV
+    val shape = RoundedCornerShape(12.dp)
+    val textSize = if (tv) 17.sp else 14.sp
+    val line: @Composable (Int, String, String) -> Unit = { icon, label, detail ->
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Icon(painterResource(icon), contentDescription = null, tint = WarningAccent,
+                 modifier = Modifier.size(20.dp))
+            Text(buildAnnotatedString {
+                     withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = LaserColors.Text)) {
+                         append(label)
+                     }
+                     append(" · ")
+                     append(detail)
+                 },
+                 color = LaserColors.Muted, fontFamily = BodyFamily, fontSize = textSize,
+                 lineHeight = textSize * 1.3f)
+        }
+    }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(WarningAccent.copy(alpha = 0.08f))
+            .border(1.dp, WarningAccent.copy(alpha = 0.45f), shape)
+            .padding(horizontal = if (tv) 16.dp else 14.dp, vertical = if (tv) 12.dp else 10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (disc.decoys)
+            line(R.drawable.ic_lock, stringResource(R.string.warning_decoys),
+                 stringResource(R.string.warning_decoys_detail))
+        if (region != null)
+            line(R.drawable.ic_region,
+                 pluralStringResource(R.plurals.warning_region, region.disc.size,
+                                      region.disc.size, region.disc.joinToString(", ")),
+                 stringResource(R.string.warning_region_detail, region.drive.joinToString(", ")))
     }
 }
 

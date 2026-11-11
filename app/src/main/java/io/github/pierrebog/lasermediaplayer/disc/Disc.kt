@@ -118,6 +118,31 @@ fun DiscInfo.withTracksOf(version: VersionInfo?): DiscInfo {
            else copy(audioTracks = audio, subtitleTracks = subtitles)
 }
 
+/**
+ * A DVD the drive's region forbids, as laser.c found it: the regions, 1 to 8,
+ * the disc is coded for and those the drive is set to. It still plays: a
+ * region-1 disc did on a region-2 drive, slower to start.
+ */
+data class RegionMismatch(val disc: List<Int>, val drive: List<Int>) {
+    companion object {
+        /** From laser.c's "disc,drive" - two hexadecimal masks, bit 0 for
+         * region 1, set when the region is PROHIBITED; null if malformed or
+         * if either permits no region. */
+        fun parse(value: String?): RegionMismatch? {
+            val f = value?.split(',')?.takeIf { it.size == 2 } ?: return null
+            val disc = permitted(f[0]) ?: return null
+            val drive = permitted(f[1]) ?: return null
+            return RegionMismatch(disc, drive)
+        }
+
+        private fun permitted(mask: String): List<Int>? {
+            val m = mask.trim().toIntOrNull(16)?.takeIf { it in 0..0xFF } ?: return null
+            return (0 until 8).filter { m and (1 shl it) == 0 }.map { it + 1 }
+                .takeIf { it.isNotEmpty() }
+        }
+    }
+}
+
 /** The disc in one drive. */
 data class DiscInfo(
     val deviceName: String,
@@ -145,6 +170,12 @@ data class DiscInfo(
     val mainTitle: Int? = null,
     /** A Blu-ray's AACS protection, from laser.c; null if unknown. */
     val aacs: Boolean? = null,
+    /** A DVD with decoys, from laser.c: titles a structural protection adds,
+     * as long as the film, that only the disc's menus avoid for sure. */
+    val decoys: Boolean = false,
+    /** A DVD the drive's region forbids, from laser.c; null when they agree
+     * or nothing could tell. Of this drive: never remembered with the disc. */
+    val region: RegionMismatch? = null,
     /** A DVD's versions of the film, the shortest first: none, or two or
      * more of different lengths, the user's choice. The main title's length
      * is the longest's. */

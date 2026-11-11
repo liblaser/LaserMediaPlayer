@@ -40,6 +40,15 @@
     <!-- The heading over the tracks and the buttons playing without the menus. -->
     <string name="without_menus_heading">Zonder de menu\'s van de disc</string>
     <string name="with_menus_heading">Met de menu\'s van de disc</string>
+    <!-- The warnings over a DVD's tracks: a disc with decoys, and a disc the
+         drive's region forbids - its regions (count, then the list), the drive's. -->
+    <string name="warning_decoys">Beveiligde disc</string>
+    <string name="warning_decoys_detail">afspelen met de menu\'s wordt aanbevolen</string>
+    <plurals name="warning_region">
+        <item quantity="one">Regio %2$s</item>
+        <item quantity="other">Regio\'s %2$s</item>
+    </plurals>
+    <string name="warning_region_detail">station ingesteld op regio %1$s, het starten duurt langer</string>
     <string name="video_part_heading">Videogedeelte</string>
     <string name="play_audio_part">Audiogedeelte afspelen</string>
     <string name="play_video_part">Videogedeelte afspelen</string>

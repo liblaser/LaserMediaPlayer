@@ -40,6 +40,16 @@
     <!-- The heading over the tracks and the buttons playing without the menus. -->
     <string name="without_menus_heading">Sem os menus do disco</string>
     <string name="with_menus_heading">Com os menus do disco</string>
+    <!-- The warnings over a DVD's tracks: a disc with decoys, and a disc the
+         drive's region forbids - its regions (count, then the list), the drive's. -->
+    <string name="warning_decoys">Disco protegido</string>
+    <string name="warning_decoys_detail">recomenda-se reproduzir com os menus</string>
+    <plurals name="warning_region">
+        <item quantity="one">Região %2$s</item>
+        <item quantity="many">Regiões %2$s</item>
+        <item quantity="other">Regiões %2$s</item>
+    </plurals>
+    <string name="warning_region_detail">unidade na região %1$s, a inicialização será mais lenta</string>
     <string name="video_part_heading">Parte de vídeo</string>
     <string name="play_audio_part">Reproduzir a parte de áudio</string>
     <string name="play_video_part">Reproduzir a parte de vídeo</string>
