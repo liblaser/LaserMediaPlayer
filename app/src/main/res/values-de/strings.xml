@@ -80,6 +80,13 @@
     <string name="player_play">Abspielen</string>
     <string name="player_error">Diese Disc konnte nicht abgespielt werden.</string>
     <string name="player_error_aacs">Diese Blu-ray konnte nicht entschlüsselt werden: Die Schlüsseldatei enthält wahrscheinlich keine Schlüssel für sie. Du kannst in den Optionen unter „Wiedergabe“ eine neuere KEYDB.cfg laden.</string>
+    <string name="player_wait_loading">Wird geladen…</string>
+    <string name="player_wait_menus">Disc-Menüs werden vorbereitet…</string>
+    <string name="player_wait_menus_hint">Beim ersten Mal dauert das etwas länger.</string>
+    <string name="player_wait_keys">Schlüssel der Disc werden ermittelt…</string>
+    <string name="player_wait_keys_hint">Ihre Region passt nicht zu der des Laufwerks: Beim ersten Mal kann das eine Weile dauern.</string>
+    <string name="player_wait_unreadable">Unlesbare Sektoren werden übersprungen…</string>
+    <string name="player_wait_unreadable_hint">Manche Kopierschutzverfahren bringen sie absichtlich auf die Disc: Das Laufwerk braucht bei jedem eine Weile, bis es aufgibt.</string>
     <string name="nav_up">Hoch</string>
     <string name="nav_down">Runter</string>
     <string name="nav_left">Links</string>

@@ -22,6 +22,7 @@ import io.github.pierrebog.lasermediaplayer.resume.TrackChoice
 import io.github.pierrebog.lasermediaplayer.settings.interfaceLocale
 import io.github.pierrebog.lasermediaplayer.settings.sameLanguage
 import io.github.pierrebog.lasermediaplayer.ui.home.PlaybackRequest
+import io.github.pierrebog.lasermediaplayer.vlc.PlaybackCaches
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,6 +39,22 @@ data class ChapterMark(val startMs: Long, val durationMs: Long, val name: String
 /** A track of the audio screen. [title] is null until the disc's names are
  * looked up; [durationMs] is 0 when unknown. */
 data class PlaylistItem(val title: String?, val durationMs: Long)
+
+/** What a playback is waiting for before its first picture, as far as can be
+ * told. */
+enum class Wait {
+    /** Nothing known to be slow. */
+    LOADING,
+    /** A Blu-ray's menus written in Java, whose classes are converted for the
+     * first time. */
+    MENUS,
+    /** A DVD the drive's region forbids, whose keys are cracked for the first
+     * time. */
+    KEYS,
+    /** The drive is finding sectors it cannot read - as some copy
+     * protections put on a disc on purpose - each costing it retries. */
+    UNREADABLE,
+}
 
 data class PlayerUi(
     val playing: Boolean = false,
@@ -71,6 +88,9 @@ data class PlayerUi(
     /** The picture fills the screen, cropped, rather than fitting in it:
      * chosen for the disc, and remembered. */
     val fill: Boolean = false,
+    /** Playback has taken a while and shows no picture yet: what it waits
+     * for. Null otherwise, and from the first picture on. */
+    val waiting: Wait? = null,
 ) {
     /** Position in the playlist's current track: a CD track is a media of
      * its own, a DVD-Audio track a chapter of the title. */
@@ -198,6 +218,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         app.drives.startPlayback(deviceName)
         driveTaken = true
         if (hasDiscMenu && kind == DiscKind.BLURAY) main.postDelayed(menuWatch, MENU_WATCH_MS)
+        prepareWait()
 
         val media = Media(app.engine.libVlc, mrl.toUri())
         request.options.forEach { media.addOption(it) }
@@ -465,6 +486,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
     fun close(onStopped: () -> Unit = {}) {
         if (closing) return
         closing = true
+        endWait()
         stoppedCallback = onStopped
         if (!mediaSet) {
             finish()
@@ -543,8 +565,12 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
                 refreshSelected()
                 refreshAspect()
             }
-            /* The video output is up: the picture's size is known. */
-            MediaPlayer.Event.Vout -> refreshAspect()
+            /* The video output is up: the picture's size is known, and the
+             * wait is over. */
+            MediaPlayer.Event.Vout -> {
+                refreshAspect()
+                if (event.voutCount > 0) endWait(firstPicture = true)
+            }
             MediaPlayer.Event.EndReached -> {
                 /* Changing tracks stops the previous one, and libvlcjni reports
                  * stopping (close()) as EndReached: not an end, and the resume
@@ -555,9 +581,11 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
                  * played either. */
                 request.disc.let { app.resume.savePoint(it, ResumePoint(-1, 0, 0)) }
                 playedVersion?.let { app.resume.savePoint(request.disc, ResumePoint(-1, 0, 0), it) }
+                endWait()
                 _state.update { it.copy(playing = false, ended = true) }
             }
             MediaPlayer.Event.EncounteredError -> {
+                endWait()
                 /* A protected Blu-ray failing before it plays: libaacs
                  * found no keys for it - libaacs itself was checked before
                  * the playback, the key file too. */
@@ -600,7 +628,89 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         player.release()
         subItems?.forEach { it.release() }
         subItems = null
+        /* libVLC has stopped: all it wrote is there. */
+        val before = cacheBefore
+        if (before != null && pictured) {
+            val disc = request.disc
+            Thread({ caches.record(disc, before) }, "PlaybackCaches").start()
+        }
         if (driveTaken) app.drives.endPlayback(deviceName, eject = ejectWhenStopped)
+    }
+
+    /* ---- the wait for the first picture ---------------------------------- */
+
+    /*
+     * Once playback has gone [WAIT_DELAY_MS] without a picture, the screen
+     * says what it waits for (PlayerUi.waiting), until the first picture.
+     * What is slow after it - a DVD's keys cracked as its menu leads into the
+     * film - is not said.
+     *
+     * Whether this playback has a cache to fill, the caches tell
+     * (PlaybackCaches): it fills them on a disc's first playback. Whether the
+     * drive is finding sectors it cannot read, the count of such blocks the
+     * drive's polls take does (DriveRepository.unreadable): rising, it is.
+     */
+    private val caches = PlaybackCaches(app, app.resume)
+    /* The cache this playback may fill, as it was before; null if none. */
+    private var cacheBefore: PlaybackCaches.Snapshot? = null
+    /* What the caches say will be slow. */
+    private var expectedWait = Wait.LOADING
+    /* The disc's blocks found not to read when playback started - by its
+     * classification, or an earlier playback; null until a poll says. */
+    private var unreadableAtStart: Int? = null
+    private var unreadableSeen = false
+    private var waitOver = false
+    /* The first picture came: what this playback added to the cache is
+     * then what the disc needs, not what was begun and given up. */
+    private var pictured = false
+
+    /** Before libVLC starts: the cache as it is, and what it says. */
+    private fun prepareWait() {
+        if (kind.isAudio) return
+        /* Every DVD's keys are recorded, for a drive whose region forbids
+         * it later. */
+        val cache = when (kind) {
+            DiscKind.BLURAY -> PlaybackCaches.Cache.DEX.takeIf { hasDiscMenu }
+            DiscKind.DVD_VIDEO -> PlaybackCaches.Cache.DVDCSS
+            else -> null
+        }
+        if (cache != null) {
+            cacheBefore = caches.snapshot(cache)
+            val cold = caches.cold(request.disc, cache)
+            expectedWait = when {
+                !cold -> Wait.LOADING
+                cache == PlaybackCaches.Cache.DEX && request.disc.bdj -> Wait.MENUS
+                cache == PlaybackCaches.Cache.DVDCSS && request.disc.region != null -> Wait.KEYS
+                else -> Wait.LOADING
+            }
+        }
+        unreadableAtStart = app.drives.unreadable.value[deviceName]
+        main.postDelayed(waitWatch, WAIT_DELAY_MS)
+    }
+
+    /* Shows the wait, then looks again every WAIT_WATCH_MS whether the drive
+     * has found more blocks it cannot read: from then on, that is the
+     * wait. */
+    private val waitWatch = object : Runnable {
+        override fun run() {
+            if (waitOver) return
+            val count = app.drives.unreadable.value[deviceName]
+            val start = unreadableAtStart
+            if (start == null) unreadableAtStart = count
+            else if (count != null && count > start) unreadableSeen = true
+            val wait = if (unreadableSeen) Wait.UNREADABLE else expectedWait
+            if (_state.value.waiting != wait) _state.update { it.copy(waiting = wait) }
+            main.postDelayed(this, WAIT_WATCH_MS)
+        }
+    }
+
+    /** The first picture came, or playback ended without one. */
+    private fun endWait(firstPicture: Boolean = false) {
+        if (waitOver) return
+        waitOver = true
+        pictured = firstPicture
+        main.removeCallbacks(waitWatch)
+        if (_state.value.waiting != null) _state.update { it.copy(waiting = null) }
     }
 
     /* ---- chapters ---------------------------------------------------------- */
@@ -982,6 +1092,8 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         const val MENU_WATCH_MS = 500L
         const val STOP_WAIT_MS = 3_000L
         const val LENGTH_TOLERANCE_MS = 1_000L
+        const val WAIT_DELAY_MS = 1_000L
+        const val WAIT_WATCH_MS = 500L
     }
 }
 

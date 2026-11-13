@@ -169,7 +169,9 @@ private fun LicenceButton(metrics: OptionsMetrics, fill: Boolean, onClick: () ->
     }
 }
 
-/** A library with its version and its licence. */
+/** A library with its version and its licence. All three rows are LGPL
+ * today; a library under another licence is one row away. */
+@Suppress("SameParameterValue")
 @Composable
 private fun LibraryRow(name: String, version: String, licence: Licence, metrics: OptionsMetrics) {
     Row(

@@ -82,6 +82,14 @@
     <string name="player_play">Play</string>
     <string name="player_error">This disc could not be played.</string>
     <string name="player_error_aacs">This Blu-ray could not be decrypted: the key file probably has no keys for it. You can load a newer KEYDB.cfg in the options, under Playback.</string>
+    <!-- The video player waiting for its first picture: what for, when known. -->
+    <string name="player_wait_loading">Loading…</string>
+    <string name="player_wait_menus">Preparing the disc menus…</string>
+    <string name="player_wait_menus_hint">This takes a little longer the first time.</string>
+    <string name="player_wait_keys">Retrieving the disc\'s keys…</string>
+    <string name="player_wait_keys_hint">Its region doesn\'t match the drive\'s: this can take a while the first time.</string>
+    <string name="player_wait_unreadable">Getting past unreadable sectors…</string>
+    <string name="player_wait_unreadable_hint">Some copy protections put them on a disc on purpose: the drive takes a while to give up on each.</string>
     <string name="nav_up">Up</string>
     <string name="nav_down">Down</string>
     <string name="nav_left">Left</string>

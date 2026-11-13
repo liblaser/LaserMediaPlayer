@@ -95,6 +95,13 @@ class DriveRepository(
     private val _ejectRequests = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val ejectRequests: SharedFlow<String> = _ejectRequests.asSharedFlow()
 
+    /** The blocks of each drive's disc found not to read, by device name
+     * ([LaserDrive.unreadable]): read with every poll, playback included,
+     * and once a classification is over. A rise during playback is the
+     * drive struggling with sectors it cannot read (PlayerController). */
+    private val _unreadable = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val unreadable: StateFlow<Map<String, Int>> = _unreadable.asStateFlow()
+
     /** The app is shown: the drives are followed only then. */
     private var foreground = false
     /** One watch per drive with a connection, while in the foreground. */
@@ -152,6 +159,7 @@ class DriveRepository(
                         drain -= name
                         arrived -= name
                         lastMedium -= name
+                        _unreadable.update { it - name }
                         declined -= name
                         notDrives -= name
                         /* The watch lets go of the token before the
@@ -288,6 +296,9 @@ class DriveRepository(
             }
             while (isActive) {
                 delay(POLL_INTERVAL)
+                /* Even when the poll gets no answer: the drive busy reading,
+                 * retrying a sector it cannot read among others. */
+                noteUnreadable(deviceName, fd)
                 if (deviceName in quiet) continue
                 val status = withContext(Dispatchers.IO) { LaserDrive.poll(fd) } ?: continue
                 /* It answers now: what it holds can be read. Only once it
@@ -324,6 +335,14 @@ class DriveRepository(
             withContext(Dispatchers.IO) { LaserDrive.claim(fd) }
                 .also { if (it == LaserDrive.Claim.OK) claims[deviceName] = fd }
         }
+    }
+
+    /** Notes [deviceName]'s count of unreadable blocks, read from its
+     * token [fd]: [unreadable]. */
+    private suspend fun noteUnreadable(deviceName: String, fd: Int) {
+        val count = withContext(Dispatchers.IO) { LaserDrive.unreadable(fd) }
+        if (_unreadable.value[deviceName] != count)
+            _unreadable.update { it + (deviceName to count) }
     }
 
     /** What the drive reported. A new disc is classified; a disc taken out,
@@ -490,6 +509,9 @@ class DriveRepository(
         /* The drive did not answer, which liblaser tells from an empty one:
          * tried again once it answers (see watch), once. */
         val silent = status == DriveStatus.NotResponding
+        /* What the classification found not to read: the count a playback
+         * starts from. Noted before the disc is shown, and can be played. */
+        claims[name]?.let { noteUnreadable(name, it) }
         setStatus(device.deviceName, status)
         if (silent && name !in wakeRetried) {
             Log.i(LASER_TAG, "$name did not answer, to be classified again once it does")

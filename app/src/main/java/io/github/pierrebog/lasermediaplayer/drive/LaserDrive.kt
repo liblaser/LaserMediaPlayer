@@ -65,6 +65,14 @@ object LaserDrive {
         )
     }
 
+    /**
+     * How many blocks of the disc in the drive have been found not to read,
+     * since it was put in (laser_unreadable_total()): a count liblaser keeps,
+     * answered at once, while the drive is busy reading too - when [poll]
+     * gets no answer. 0 if [fd] is not claimed.
+     */
+    fun unreadable(fd: Int): Int = nativeUnreadable(fd)
+
     /** Locks the tray, its button then only asking ([Event.EJECT_REQUEST]),
      * or unlocks it. */
     fun lock(fd: Int, locked: Boolean): Boolean = nativeLock(fd, locked) == 0
@@ -78,6 +86,7 @@ object LaserDrive {
     @JvmStatic private external fun nativeAcquire(fd: Int): Int
     @JvmStatic private external fun nativeRelease(fd: Int)
     @JvmStatic private external fun nativePoll(fd: Int): Int
+    @JvmStatic private external fun nativeUnreadable(fd: Int): Int
     @JvmStatic private external fun nativeLock(fd: Int, locked: Boolean): Int
     @JvmStatic private external fun nativeEject(fd: Int): Int
 }

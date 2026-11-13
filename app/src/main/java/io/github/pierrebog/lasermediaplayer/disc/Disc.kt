@@ -170,6 +170,9 @@ data class DiscInfo(
     val mainTitle: Int? = null,
     /** A Blu-ray's AACS protection, from laser.c; null if unknown. */
     val aacs: Boolean? = null,
+    /** A Blu-ray whose menus are written in Java (BD-J), from laser.c: their
+     * classes are converted the first time they play, which takes a while. */
+    val bdj: Boolean = false,
     /** A DVD with decoys, from laser.c: titles a structural protection adds,
      * as long as the film, that only the disc's menus avoid for sure. */
     val decoys: Boolean = false,

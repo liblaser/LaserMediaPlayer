@@ -81,6 +81,13 @@
     <string name="player_play">Reproduzir</string>
     <string name="player_error">Não foi possível reproduzir este disco.</string>
     <string name="player_error_aacs">Não foi possível descriptografar este Blu-ray: provavelmente o arquivo de chaves não tem as chaves dele. Você pode carregar um KEYDB.cfg mais recente nas opções, em Reprodução.</string>
+    <string name="player_wait_loading">Carregando…</string>
+    <string name="player_wait_menus">Preparando os menus do disco…</string>
+    <string name="player_wait_menus_hint">Na primeira vez, isso demora um pouco mais.</string>
+    <string name="player_wait_keys">Obtendo as chaves do disco…</string>
+    <string name="player_wait_keys_hint">A região dele não corresponde à da unidade: na primeira vez, isso pode demorar um pouco.</string>
+    <string name="player_wait_unreadable">Pulando setores ilegíveis…</string>
+    <string name="player_wait_unreadable_hint">Algumas proteções contra cópia os colocam no disco de propósito: a unidade demora um pouco para desistir de cada um.</string>
     <string name="nav_up">Para cima</string>
     <string name="nav_down">Para baixo</string>
     <string name="nav_left">Esquerda</string>

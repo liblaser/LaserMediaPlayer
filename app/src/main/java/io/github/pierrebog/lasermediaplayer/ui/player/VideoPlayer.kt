@@ -71,12 +71,15 @@ import androidx.core.view.WindowInsetsControllerCompat
 import io.github.pierrebog.lasermediaplayer.R
 import io.github.pierrebog.lasermediaplayer.disc.DiscKind
 import io.github.pierrebog.lasermediaplayer.ui.FormFactor
+import io.github.pierrebog.lasermediaplayer.ui.home.DiscSpinner
 import io.github.pierrebog.lasermediaplayer.ui.home.PlaybackRequest
 import io.github.pierrebog.lasermediaplayer.ui.home.TrackSheetKind
 import io.github.pierrebog.lasermediaplayer.ui.home.TrackSheets
 import io.github.pierrebog.lasermediaplayer.ui.home.discTitle
 import io.github.pierrebog.lasermediaplayer.ui.home.formatTime
 import io.github.pierrebog.lasermediaplayer.ui.home.trackButtonTexts
+import io.github.pierrebog.lasermediaplayer.ui.theme.BodyFamily
+import io.github.pierrebog.lasermediaplayer.ui.theme.DisplayFamily
 import io.github.pierrebog.lasermediaplayer.ui.theme.LaserColors
 import io.github.pierrebog.lasermediaplayer.ui.theme.LaserType
 import kotlinx.coroutines.delay
@@ -102,6 +105,9 @@ import org.videolan.libvlc.util.VLCVideoLayout
  * The remote: while the controls are hidden, left/right seek and any other
  * key shows them; while a disc menu shows, the arrows and OK go to it. Media
  * keys work at any time.
+ *
+ * A first picture long in coming is waited for with the disc turning, as
+ * when it is identified, and what it waits for when that is known (Wait).
  */
 @Composable
 fun VideoPlayer(
@@ -196,6 +202,12 @@ fun VideoPlayer(
             .focusable(),
     ) {
         Video(controller, videoModifier)
+        /* Where the picture will be, under the controls. */
+        ui.waiting?.let { wait ->
+            Box(videoModifier, contentAlignment = Alignment.Center) {
+                WaitMessage(wait, compact = !overlay)
+            }
+        }
         if (overlay) {
             /* A tap shows or hides the controls, or in a disc menu presses
              * its button; over the picture, whose view would take the
@@ -293,6 +305,32 @@ private fun Video(controller: PlayerController, modifier: Modifier) {
         onRelease = { controller.detach(it) },
         modifier = modifier.background(Color.Black),
     )
+}
+
+/**
+ * What playback waits for, under the disc turning - as on the home screen
+ * while a disc is identified. [compact] for the portrait band.
+ */
+@Composable
+private fun WaitMessage(wait: Wait, compact: Boolean) {
+    val (title, hint) = when (wait) {
+        Wait.LOADING -> R.string.player_wait_loading to null
+        Wait.MENUS -> R.string.player_wait_menus to R.string.player_wait_menus_hint
+        Wait.KEYS -> R.string.player_wait_keys to R.string.player_wait_keys_hint
+        Wait.UNREADABLE -> R.string.player_wait_unreadable to R.string.player_wait_unreadable_hint
+    }
+    Column(
+        Modifier.padding(horizontal = if (compact) 20.dp else 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 16.dp),
+    ) {
+        DiscSpinner(if (compact) 56.dp else 112.dp)
+        Text(stringResource(title), color = LaserColors.Text, fontFamily = DisplayFamily,
+             fontSize = if (compact) 20.sp else 30.sp, textAlign = TextAlign.Center)
+        if (hint != null)
+            Text(stringResource(hint), color = LaserColors.Muted, fontFamily = BodyFamily,
+                 fontSize = if (compact) 13.sp else 16.sp, textAlign = TextAlign.Center)
+    }
 }
 
 /** Where the touch layer is, for its taps' window coordinates: not state,

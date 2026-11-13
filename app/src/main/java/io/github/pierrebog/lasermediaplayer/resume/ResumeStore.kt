@@ -45,6 +45,13 @@ data class TrackChoice(
 enum class AudioChannel { STEREO, LEFT, RIGHT }
 
 /**
+ * The files a disc's playbacks added to one of the caches the libraries fill,
+ * by their paths in it, and the installation of the app they were added
+ * under: see PlaybackCaches.
+ */
+data class CacheRecord(val stamp: String, val files: Set<String>)
+
+/**
  * Per-disc memory, keyed by [DiscInfo.key], in SharedPreferences: a few
  * values per disc, no query needed.
  */
@@ -130,6 +137,23 @@ class ResumeStore(context: Context) {
 
     fun saveFillScreen(disc: DiscInfo, fill: Boolean) {
         prefs.edit { putBoolean("${disc.key}|fill", fill) }
+    }
+
+    /** What [disc]'s playbacks added to the cache [cache]; null if nothing
+     * was recorded. */
+    fun cacheRecord(disc: DiscInfo, cache: String): CacheRecord? {
+        val k = "${disc.key}|cache-$cache"
+        val files = prefs.getString(k, null) ?: return null
+        return CacheRecord(prefs.getString("$k-stamp", null).orEmpty(),
+                           files.split('\n').filter { it.isNotEmpty() }.toSet())
+    }
+
+    fun saveCacheRecord(disc: DiscInfo, cache: String, record: CacheRecord) {
+        val k = "${disc.key}|cache-$cache"
+        prefs.edit {
+            putString(k, record.files.joinToString("\n"))
+            putString("$k-stamp", record.stamp)
+        }
     }
 
     private companion object {

@@ -80,6 +80,13 @@
     <string name="player_play">Afspelen</string>
     <string name="player_error">Deze disc kon niet worden afgespeeld.</string>
     <string name="player_error_aacs">Deze Blu-ray kon niet worden ontsleuteld: het sleutelbestand bevat waarschijnlijk geen sleutels voor deze schijf. Je kunt een nieuwere KEYDB.cfg laden in de opties, onder Afspelen.</string>
+    <string name="player_wait_loading">Laden…</string>
+    <string name="player_wait_menus">Discmenu\'s worden voorbereid…</string>
+    <string name="player_wait_menus_hint">De eerste keer duurt dit wat langer.</string>
+    <string name="player_wait_keys">Sleutels van de disc worden opgehaald…</string>
+    <string name="player_wait_keys_hint">De regio past niet bij die van het station: de eerste keer kan dit even duren.</string>
+    <string name="player_wait_unreadable">Onleesbare sectoren worden overgeslagen…</string>
+    <string name="player_wait_unreadable_hint">Sommige kopieerbeveiligingen brengen ze opzettelijk op de disc aan: het station doet er bij elke sector even over voordat het opgeeft.</string>
     <string name="nav_up">Omhoog</string>
     <string name="nav_down">Omlaag</string>
     <string name="nav_left">Links</string>

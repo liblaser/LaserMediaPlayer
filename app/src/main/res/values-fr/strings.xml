@@ -75,6 +75,13 @@
     <string name="player_play">Lecture</string>
     <string name="player_error">Ce disque n\'a pas pu être lu.</string>
     <string name="player_error_aacs">Ce Blu-ray n\'a pas pu être déchiffré : le fichier de clés ne contient probablement pas ses clés. Vous pouvez charger un KEYDB.cfg plus récent dans les options, rubrique Lecture.</string>
+    <string name="player_wait_loading">Chargement…</string>
+    <string name="player_wait_menus">Préparation des menus du disque…</string>
+    <string name="player_wait_menus_hint">C\'est un peu plus long la première fois.</string>
+    <string name="player_wait_keys">Récupération des clés du disque…</string>
+    <string name="player_wait_keys_hint">Sa région ne correspond pas à celle du lecteur : cela peut prendre un moment la première fois.</string>
+    <string name="player_wait_unreadable">Passage des secteurs illisibles…</string>
+    <string name="player_wait_unreadable_hint">Certaines protections contre la copie en placent volontairement sur le disque : le lecteur met un moment à renoncer à chacun.</string>
     <string name="nav_up">Haut</string>
     <string name="nav_down">Bas</string>
     <string name="nav_left">Gauche</string>
