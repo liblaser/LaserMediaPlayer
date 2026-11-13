@@ -84,9 +84,9 @@ drive, `LaserPlayer` for the app and `VLC` for libVLC.
    it to `app/libs/libvlc-release.aar`. libvlcjni's `libvlc/jni/libvlc.mk`
    must build `laser-jni.c` into `libvlc.so`: the app's calls to liblaser
    (`drive/LaserDrive.kt`).
-2. For the Blu-ray menus, put the Java runtime and libbluray's jars in
-   `app/src/main/assets/bdj/` (see the README there). Without them, Blu-ray
-   discs play without their menus.
+2. For the Blu-ray menus, copy libbluray's three dex jars from the contrib's
+   `share/java/` to `app/src/main/assets/bdj/` (see the README there).
+   Without them, Blu-ray discs play without their menus.
 3. Open the project in Android Studio, or run `./gradlew assembleDebug`.
 
 The libaacs provider APK (`org.libaacs.provider`) can be built from this
@@ -114,7 +114,7 @@ app/src/main/java/io/github/pierrebog/lasermediaplayer/
   vlc/AlbumLookup.kt       names an audio CD or a DVD-Audio
   vlc/NativeEnvironment.kt libdvdcss, libdvdread, libaacs and BD-J
                            environment
-  vlc/BdjRuntime.kt        the BD-J Java runtime, unpacked from the assets
+  vlc/BdjRuntime.kt        libbluray's BD-J jars, copied from the assets
   settings/                the options and the default track languages
   storage/AacsKeys.kt      libaacs's key file, copied from the user's choice
   resume/ResumeStore.kt    resume points and track choices, per disc
@@ -147,9 +147,6 @@ libraries linked into it, and AndroidX and Kotlin's (Apache 2.0); Options ›
 About lists them with their licences (`ui/options/Credits.kt`, kept by hand
 in step with the libVLC build).
 
-For the Blu-ray menus, the APK carries a Java runtime per ABI
-(`app/src/main/assets/bdj/jre8-<abi>.zip`): the Android port of OpenJDK 8
-(GPLv2 with the Classpath Exception) built at
-https://github.com/AngelAuraMC/angelauramc-openjdk-build/commit/62359f04413c3ffe339e652b88a96d9087840cbf,
-prepared by `bdj-jre-tools/prepare-bdj-jre.sh` and libbluray's BD-J jars
-(LGPLv2.1 or later).
+For the Blu-ray menus, the APK carries libbluray's BD-J jars (LGPLv2.1 or
+later) and its dexer, AOSP's dx 1.16 (Apache 2.0), as kept for libbluray at
+https://github.com/liblaser/bdj-dx.

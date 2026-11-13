@@ -38,9 +38,9 @@ object NativeEnvironment {
         null
     }
 
-    /** The BD-J runtime the app carries for this process's ABI, to be
-     * unpacked by [BdjRuntime.install]; null if none. */
-    var bdjAbi: String? = null
+    /** The app carries libbluray's BD-J jars, to be copied by
+     * [BdjRuntime.install]. */
+    var bdjBundled = false
         private set
 
     fun configure(context: Context) {
@@ -116,36 +116,32 @@ object NativeEnvironment {
     }
 
     /**
-     * Points libbluray at the BD-J runtime, if the app carries one for this
-     * ABI: the JRE (JAVA_HOME, where bdj.c looks for lib/<arch>/server/
-     * libjvm.so), its jars (LIBBLURAY_CP, a folder: the trailing separator
-     * matters) and the Xlets' storage. Set even before BdjRuntime has
-     * unpacked them: libbluray then finds no JVM and plays without menus.
+     * Points libbluray at its BD-J jars, if the app carries them (LIBBLURAY_CP,
+     * a folder: the trailing separator matters), and at the Xlets' storage.
+     * Set even before BdjRuntime has copied them: libbluray then finds no jar
+     * and plays without menus.
      *
-     * JAVA_TOOL_OPTIONS, which the JVM reads on top of libbluray's own
-     * options: java.io.tmpdir, "/tmp" by default, which Android does not
-     * have - libbluray's Java side unpacks the disc's JARs there.
+     * BD-J runs in the app's own ART, which libVLC gives libbluray, from
+     * three dex jars - libbluray's two and its dexer, which it looks for in
+     * the same folder. ART's java.io.tmpdir is the app's cache, where
+     * libbluray unpacks the disc's JARs and keeps their classes converted to
+     * dex.
      *
      * BD_DEBUG_MASK, in debug builds: libbluray's BD-J and critical messages
      * (DBG_BDJ | DBG_CRIT).
      */
     private fun configureBdj(context: Context) {
-        val abi = processAbi(context) ?: return
-        if (!BdjRuntime.bundled(context, abi)) return
-        bdjAbi = abi
+        if (!BdjRuntime.bundled(context)) return
+        bdjBundled = true
 
         val persistent = File(context.filesDir, "bluray/persistent")
         val cache = File(context.cacheDir, "bluray")
-        val tmp = File(context.cacheDir, "bdj-tmp")
         persistent.mkdirs()
         cache.mkdirs()
-        tmp.mkdirs()
 
-        Os.setenv("JAVA_HOME", BdjRuntime.javaHome(context).absolutePath, true)
         Os.setenv("LIBBLURAY_CP", BdjRuntime.jarDir(context).absolutePath + "/", true)
         Os.setenv("LIBBLURAY_PERSISTENT_ROOT", persistent.absolutePath + "/", true)
         Os.setenv("LIBBLURAY_CACHE_ROOT", cache.absolutePath + "/", true)
-        Os.setenv("JAVA_TOOL_OPTIONS", "-Djava.io.tmpdir=${tmp.absolutePath}", true)
 
         if (BuildConfig.DEBUG)
             Os.setenv("BD_DEBUG_MASK", "0x2800", true)

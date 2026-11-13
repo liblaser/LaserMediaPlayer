@@ -78,7 +78,6 @@ internal fun AboutTab(metrics: OptionsMetrics, onOpen: (AboutPage) -> Unit) {
             { LibraryRow("libvlc", Credits.LIBVLC_VERSION, Licence.LGPL21_PLUS, metrics) },
             { LibraryRow("liblaser", Credits.LIBLASER_VERSION, Licence.LGPL21_PLUS, metrics) },
             { LibraryRow("libusb", Credits.LIBUSB_VERSION, Licence.LGPL21_PLUS, metrics) },
-            { LibraryRow("OpenJDK", Credits.OPENJDK_VERSION, Licence.GPL2_CLASSPATH, metrics) },
             { ValueRow(stringResource(R.string.about_other_libraries), "", metrics) {
                 onOpen(AboutPage.LIBRARIES) } },
         )

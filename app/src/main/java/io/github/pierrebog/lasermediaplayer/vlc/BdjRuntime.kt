@@ -2,8 +2,6 @@ package io.github.pierrebog.lasermediaplayer.vlc
 
 import android.content.Context
 import android.os.SystemClock
-import android.system.ErrnoException
-import android.system.Os
 import android.util.Log
 import io.github.pierrebog.lasermediaplayer.LASER_TAG
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,55 +9,61 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import java.io.IOException
-import java.util.zip.ZipInputStream
 
 /**
- * The Java runtime libbluray needs for BD-J menus, and libbluray's own jars.
+ * libbluray's jars, for the Blu-ray menus written in Java (BD-J).
  *
- * Shipped as assets, under "bdj/": the JRE as one zip per ABI,
- * "jre8-<abi>.zip", and the two jars, "libbluray-j2se-<version>.jar" and
- * "libbluray-awt-j2se-<version>.jar". libbluray dlopens the JVM and puts the
- * jars on its boot class path, so they must be files: they are unpacked
- * into the app's private files, once per installation of the app.
+ * BD-J runs in the app's own ART, which libVLC gives libbluray
+ * (bd_set_java_vm()). libbluray's android target installs three jars,
+ * already converted to dex: "libbluray-android-<version>.jar",
+ * "libbluray-awt-android-<version>.jar" and the dexer that converts a disc's
+ * classes on the device, "libbluray-android-dexer-<version>.jar" (dx, from
+ * libbluray's contrib/dx). libbluray loads them through a DexClassLoader.
  *
- * NativeEnvironment points libbluray at them at start (JAVA_HOME,
- * LIBBLURAY_CP), whether unpacked yet or not: before, libbluray finds no
- * JVM and plays without menus, as without this runtime.
+ * Shipped as assets, under "bdj/", and copied into the app's private files
+ * once per installation of the app: libbluray loads files. Made read-only:
+ * Android 14 refuses to load code from a writable file.
  *
- * libbluray looks for libjvm under JAVA_HOME in lib/<arch>/server, with its
- * own idea of <arch> - "arm" in a 32-bit ARM build, where the Android port
- * of OpenJDK has "aarch32"; "arm" in an arm64 build too before libbluray's
- * fix, where OpenJDK has "aarch64" - and then in lib/server: lib/server and
- * lib/client are made links to the JRE's own folders.
+ * NativeEnvironment points libbluray at their folder at start
+ * (LIBBLURAY_CP), whether copied yet or not: before, libbluray finds no jar
+ * and plays without menus.
  */
 object BdjRuntime {
 
     private const val ASSET_DIR = "bdj"
 
     /** Bumped when what install() lays out changes, to lay it out again. */
-    private const val LAYOUT = 4
+    private const val LAYOUT = 5
+
+    /** The three jars, by the start of their names. "libbluray-android-"
+     * also starts the dexer's: a jar is the first of these it starts with. */
+    private val JARS = listOf("libbluray-android-dexer-", "libbluray-awt-android-",
+                              "libbluray-android-")
 
     private val _ready = MutableStateFlow(false)
-    /** True once unpacked: Blu-ray menus can be offered. */
+    /** True once copied: Blu-ray menus can be offered. */
     val ready: StateFlow<Boolean> = _ready.asStateFlow()
 
-    fun javaHome(context: Context) = File(context.filesDir, "jre")
     fun jarDir(context: Context) = File(context.filesDir, "bdj")
     private fun stampFile(context: Context) = File(context.filesDir, "bdj.stamp")
 
-    private fun zipName(abi: String) = "jre8-$abi.zip"
+    /** Which of [JARS] [name] is; null if none. */
+    private fun jarOf(name: String): String? =
+        if (name.endsWith(".jar")) JARS.firstOrNull { name.startsWith(it) } else null
 
-    /** The app carries a runtime for [abi]: checked at start, cheaply. */
-    fun bundled(context: Context, abi: String): Boolean =
-        context.assets.list(ASSET_DIR)?.contains(zipName(abi)) == true
+    /** The app carries the three jars: checked at start, cheaply. Without
+     * the dexer, BD-J would start but could load none of a disc's classes. */
+    fun bundled(context: Context): Boolean {
+        val found = context.assets.list(ASSET_DIR).orEmpty().mapNotNull(::jarOf)
+        return JARS.all { it in found }
+    }
 
-    /** Unpacks the runtime if this installation of the app has not yet.
-     * Slow the first time - some 100 MB written: on a background thread. */
-    fun install(context: Context, abi: String) {
+    /** Copies the jars if this installation of the app has not yet: on a
+     * background thread. */
+    fun install(context: Context) {
         val stamp = stampOf(context)
         val stampFile = stampFile(context)
-        if (stampFile.isFile && stampFile.readText() == stamp &&
-            File(javaHome(context), "lib").isDirectory) {
+        if (stampFile.isFile && stampFile.readText() == stamp) {
             _ready.value = true
             return
         }
@@ -67,14 +71,13 @@ object BdjRuntime {
         val started = SystemClock.elapsedRealtime()
         try {
             stampFile.delete()
-            unzip(context, "$ASSET_DIR/${zipName(abi)}", javaHome(context))
             copyJars(context, jarDir(context))
             stampFile.writeText(stamp)
             _ready.value = true
-            Log.i(LASER_TAG, "BD-J runtime unpacked in " +
+            Log.i(LASER_TAG, "BD-J jars copied in " +
                     "${SystemClock.elapsedRealtime() - started} ms")
         } catch (e: IOException) {
-            Log.w(LASER_TAG, "BD-J runtime not unpacked, Blu-ray menus unavailable", e)
+            Log.w(LASER_TAG, "BD-J jars not copied, Blu-ray menus unavailable", e)
         }
     }
 
@@ -85,59 +88,21 @@ object BdjRuntime {
         return "$LAYOUT:${info.lastUpdateTime}"
     }
 
-    /** Into a sibling folder first, then renamed: never half a runtime. */
-    private fun unzip(context: Context, asset: String, target: File) {
-        val tmp = File(target.parentFile, target.name + ".tmp")
-        tmp.deleteRecursively()
-        if (!tmp.mkdirs()) throw IOException("cannot create $tmp")
-        val root = tmp.canonicalPath + File.separator
-
-        ZipInputStream(context.assets.open(asset).buffered()).use { zip ->
-            while (true) {
-                val entry = zip.nextEntry ?: break
-                val out = File(tmp, entry.name)
-                if (!out.canonicalPath.startsWith(root))
-                    throw IOException("entry outside the archive: ${entry.name}")
-                if (entry.isDirectory) {
-                    out.mkdirs()
-                } else {
-                    out.parentFile?.mkdirs()
-                    out.outputStream().use { zip.copyTo(it) }
-                }
-            }
-        }
-        linkVmFolders(File(tmp, "lib"))
-        replace(tmp, target)
-    }
-
-    /** lib/server -> <arch>/server, and the same for client: the folders
-     * libbluray tries whatever its <arch>. Relative, so that they survive
-     * the rename. HotSpot resolves its own path, and finds java.home from
-     * the real folder. */
-    private fun linkVmFolders(lib: File) {
-        val arches = lib.listFiles { f -> f.isDirectory }.orEmpty()
-        for (variant in listOf("server", "client")) {
-            val link = File(lib, variant)
-            if (link.exists()) continue
-            val arch = arches.firstOrNull { File(it, "$variant/libjvm.so").isFile } ?: continue
-            try {
-                Os.symlink("${arch.name}/$variant", link.path)
-            } catch (e: ErrnoException) {
-                throw IOException("cannot link $link", e)
-            }
-        }
-    }
-
+    /** Into a sibling folder first, then renamed: never half of them. */
     private fun copyJars(context: Context, target: File) {
         val tmp = File(target.parentFile, target.name + ".tmp")
         tmp.deleteRecursively()
         if (!tmp.mkdirs()) throw IOException("cannot create $tmp")
-        val jars = context.assets.list(ASSET_DIR).orEmpty().filter { it.endsWith(".jar") }
+        val jars = context.assets.list(ASSET_DIR).orEmpty().filter { jarOf(it) != null }
         if (jars.isEmpty()) throw IOException("no libbluray jar in the assets")
         for (jar in jars) {
+            val out = File(tmp, jar)
             context.assets.open("$ASSET_DIR/$jar").use { input ->
-                File(tmp, jar).outputStream().use { input.copyTo(it) }
+                out.outputStream().use { input.copyTo(it) }
             }
+            /* Loaded as code: read-only, or Android 14 refuses it. */
+            if (!out.setReadOnly())
+                throw IOException("cannot make $out read-only")
         }
         replace(tmp, target)
     }

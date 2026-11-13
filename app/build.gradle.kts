@@ -31,8 +31,7 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = appVersion
-        /* The ABIs with a Java runtime for the Blu-ray menus, in
-         * src/main/assets/bdj/: jre8-<abi>.zip. */
+        /* The ABIs of the libVLC AAR. */
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
         }

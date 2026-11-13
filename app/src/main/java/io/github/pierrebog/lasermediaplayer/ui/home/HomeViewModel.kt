@@ -54,7 +54,7 @@ data class HomeState(
     val version: VersionInfo? = null,
     /** Which lookups are on: without one, no cover or poster is shown. */
     val lookups: LookupSettings = LookupSettings(),
-    /** The BD-J runtime is unpacked: Blu-ray menus can be offered. */
+    /** libbluray's BD-J jars are copied: Blu-ray menus can be offered. */
     val blurayMenus: Boolean = false,
 )
 
@@ -158,7 +158,7 @@ class HomeViewModel(private val app: LaserApp) : ViewModel() {
         val actions = ArrayList<PlayAction>()
         if (resume != null && resumeRow(disc, resume) != null) actions += PlayAction.RESUME
         when {
-            /* Menus need the BD-J runtime; without it, the film only. */
+            /* Menus need libbluray's BD-J jars; without them, the film only. */
             disc.kind == DiscKind.BLURAY && state.blurayMenus -> {
                 actions += PlayAction.NO_MENUS
                 actions += PlayAction.MENUS

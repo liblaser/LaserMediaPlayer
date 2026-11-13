@@ -6,14 +6,13 @@ import io.github.pierrebog.lasermediaplayer.R
 
 /** The licences of the libraries, named in the interface's language. */
 enum class Licence {
-    GPL2_PLUS, GPL2_CLASSPATH, LGPL21_PLUS, LGPL21, LGPL2_PLUS, LGPL3_OR_GPL2,
+    GPL2_PLUS, LGPL21_PLUS, LGPL21, LGPL2_PLUS, LGPL3_OR_GPL2,
     MIT, BSD2, BSD3, ZLIB, LIBPNG, FREETYPE, GSM, APACHE2, OFL,
 }
 
 @Composable
 fun licenceLabel(licence: Licence): String = when (licence) {
     Licence.GPL2_PLUS -> stringResource(R.string.lic_or_later, "GPLv2")
-    Licence.GPL2_CLASSPATH -> "GPLv2 + Classpath"
     Licence.LGPL21_PLUS -> stringResource(R.string.lic_or_later, "LGPLv2.1")
     Licence.LGPL21 -> "LGPLv2.1"
     Licence.LGPL2_PLUS -> stringResource(R.string.lic_or_later, "LGPLv2")
@@ -48,10 +47,6 @@ object Credits {
     const val LIBLASER_VERSION = "0.3.1"
     /* Vendored in liblaser. */
     const val LIBUSB_VERSION = "1.0.30"
-    /* The Java runtime for the Blu-ray menus (BD-J), in the assets: the
-     * Android port of OpenJDK 8 built by angelauramc-openjdk-build, prepared
-     * by the app's bdj-jre-tools - its source is given in the README. */
-    const val OPENJDK_VERSION = "8"
 
     /** The other libraries in libvlc.so, liblaser's vendored libudfread
      * included. */
@@ -119,8 +114,9 @@ object Credits {
         Library("zlib", "Copyright © Jean-loup Gailly and Mark Adler", Licence.ZLIB),
     )
 
-    /** The libraries of the app itself, FreeType, built for the Java
-     * runtime's fonts, and the app's fonts. */
+    /** The libraries of the app itself, dx, which converts a Blu-ray's BD-J
+     * classes for the app's ART (libbluray's dexer, in the assets), and the
+     * app's fonts. */
     val inApp = listOf(
         Library("AndroidX, Jetpack Compose", "Copyright © The Android Open Source Project",
                 Licence.APACHE2),
@@ -128,7 +124,7 @@ object Credits {
                 "Language contributors", Licence.APACHE2),
         Library("kotlinx.coroutines", "Copyright © 2016-2026 JetBrains s.r.o. and contributors",
                 Licence.APACHE2),
-        Library("FreeType", "Copyright © The FreeType Project (www.freetype.org)", Licence.FREETYPE),
+        Library("dx", "Copyright © The Android Open Source Project", Licence.APACHE2),
         Library("Instrument Sans", "Copyright © 2022 The Instrument Sans Project Authors",
                 Licence.OFL),
         Library("Instrument Serif", "Copyright © 2022 The Instrument Serif Project Authors",

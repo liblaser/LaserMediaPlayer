@@ -34,11 +34,10 @@ class LaserApp : Application() {
         super.onCreate()
         /* Before LibVLC exists: setenv() races libVLC's own getenv(). */
         NativeEnvironment.configure(this)
-        NativeEnvironment.bdjAbi?.let { abi ->
+        if (NativeEnvironment.bdjBundled)
             thread(name = "bdj-install", priority = Thread.MIN_PRIORITY) {
-                BdjRuntime.install(this, abi)
+                BdjRuntime.install(this)
             }
-        }
 
         settings = AppSettings(this)
         engine = VlcEngine(this)
