@@ -36,12 +36,16 @@ data class FilmInfo(val title: String, val year: String?, val poster: File?, val
  * each language. A failed request is tried again next time, and so is a
  * poster that could not be downloaded.
  *
+ * Kept in the app's cache, the poster beside what was found: Android may
+ * empty it, and the disc is then looked up again. What matters of a disc -
+ * where its playback stopped, its tracks - is in ResumeStore.
+ *
  * TMDB is asked only when the lookup is on and the user gave a key; what
  * is kept is used either way.
  */
 class FilmLookup(context: Context, private val settings: AppSettings) {
 
-    private val dir = File(context.filesDir, "films")
+    private val dir = movedToCache(context, "films")
 
     /** The film on [disc], or null; never throws. */
     suspend fun find(disc: DiscInfo): FilmInfo? = withContext(Dispatchers.IO) {
@@ -150,6 +154,8 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
                     .put("original", film.originalLanguage ?: "")
                     .put("poster", posterUrl ?: "")
         try {
+            /* The cache may have been emptied since the folder was made. */
+            dir.mkdirs()
             writeAtomically(File(dir, "$id.json"), o.toString())
         } catch (e: Exception) {
             Log.w(LASER_TAG, "cannot save film $id", e)
@@ -303,8 +309,11 @@ object Tmdb {
      * more or less of the credits. A PAL disc plays a film 4 % fast, so the
      * running time is also compared sped up: "Vaiana" (107 min) is 103 min
      * on a PAL DVD, closer to "Vaiana 2" (100 min) than to itself otherwise.
-     * Of candidates as close, the first in TMDB's order; one within a minute
-     * ends the search.
+     * Of the candidates that fit, one named exactly the query comes first:
+     * "Rio" (96 min, 92 min on a PAL DVD) over "Rio Corgo", which TMDB may list
+     * before it in French. Then the closest; of candidates as close, the
+     * first in TMDB's order. One named so and within a minute ends the
+     * search.
      * Without it, the first candidate if its title holds all the query's
      * words: "Fellowship of the Ring" is "The Lord of the Rings: The
      * Fellowship of the Ring".
@@ -334,17 +343,25 @@ object Tmdb {
             } else {
                 var best: JSONObject? = null
                 var bestGap = Long.MAX_VALUE
+                var bestNamed = false
                 for (c in candidates) {
                     val runtimeMs = runtimeOf(c)
                     if (runtimeMs <= 0) continue
                     /* At 25 frames a second instead of 24: PAL. */
                     val gap = minOf(abs(runtimeMs - mainLengthMs),
                                     abs(runtimeMs * 24 / 25 - mainLengthMs))
-                    if (gap <= tolerance && gap < bestGap) {
+                    val named = named(c.optString("title"), query) ||
+                        named(c.optString("original_title"), query)
+                    Log.d(LASER_TAG, "film \"$query\": candidate \"${c.optString("title")}\" (" +
+                          "${c.optString("release_date").take(4)}), ${runtimeMs / 60_000} min" +
+                          if (named) ", named so" else "")
+                    if (gap > tolerance) continue
+                    if (best == null || (named && !bestNamed) || (named == bestNamed && gap < bestGap)) {
                         best = c
                         bestGap = gap
+                        bestNamed = named
                     }
-                    if (bestGap <= CLOSE_MS) break
+                    if (bestNamed && bestGap <= CLOSE_MS) break
                 }
                 best
             }
@@ -404,6 +421,12 @@ object Tmdb {
     private fun holds(title: String, query: String): Boolean {
         val wanted = words(query)
         return wanted.isNotEmpty() && words(title).containsAll(wanted)
+    }
+
+    /** [title] is [query], case, accents and punctuation aside. */
+    private fun named(title: String, query: String): Boolean {
+        val wanted = words(query)
+        return wanted.isNotEmpty() && words(title) == wanted
     }
 
     /** [title] has the words of [query] in a row, in order, case and accents

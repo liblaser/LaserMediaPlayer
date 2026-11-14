@@ -1,5 +1,7 @@
-2026-XX-XX: Version 0.1.1
+2026-XX-XX: Version 0.2.0
     - Show warnings for DVD region-mismatch or protection
+    - Show what movie playback is waiting for before its first picture
+    - Run BD-J menus in the app's ART, without a bundled JRE (app size halved)
     - Update liblaser to version 0.3.2
 
 2026-11-05: Version 0.1.0

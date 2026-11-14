@@ -40,10 +40,13 @@ fun dvdaId(lengthsMs: List<Long>): String = "dvda-" + tocId(lengthsMs)
 /**
  * What was found for each CD or DVD-Audio, so that a disc seen before needs
  * no network: albums/<id>.json, and its cover in albums/<id>.jpg.
+ *
+ * In the app's cache: Android may empty it, and the disc is then looked up
+ * again.
  */
 class AlbumStore(context: Context) {
 
-    private val dir = File(context.filesDir, "albums")
+    private val dir = movedToCache(context, "albums")
 
     fun coverFile(id: String): File = File(dir.apply { mkdirs() }, "$id.jpg")
 
@@ -77,6 +80,8 @@ class AlbumStore(context: Context) {
                 }
             })
         try {
+            /* The cache may have been emptied since the folder was made. */
+            dir.mkdirs()
             writeAtomically(File(dir, "$id.json"), o.toString())
         } catch (e: Exception) {
             Log.w(LASER_TAG, "cannot save album $id", e)
@@ -85,4 +90,18 @@ class AlbumStore(context: Context) {
 
     private fun JSONObject.stringOrNull(key: String): String? =
         if (isNull(key)) null else optString(key).takeIf { it.isNotEmpty() }
+}
+
+/**
+ * The folder [name] of the app's cache, where the lookups keep what they
+ * found. Earlier versions kept it in the app's files: moved, once - else
+ * dropped, should the move fail - rather than left there for good.
+ */
+fun movedToCache(context: Context, name: String): File {
+    val dir = File(context.cacheDir, name)
+    val old = File(context.filesDir, name)
+    if (old.exists()) {
+        if (dir.exists() || !old.renameTo(dir)) old.deleteRecursively()
+    }
+    return dir
 }
