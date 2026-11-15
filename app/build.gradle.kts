@@ -7,7 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val appVersion = "0.1.0"
+val appVersion = "0.2.0"
 
 /* The release key, from keystore.properties at the project's root - not in
  * git: storeFile, storePassword, keyAlias, keyPassword. Without it, a
@@ -15,7 +15,7 @@ val appVersion = "0.1.0"
 val keystore = rootProject.file("keystore.properties").takeIf { it.isFile }
     ?.let { file -> Properties().apply { file.inputStream().use { load(it) } } }
 
-/* The APKs' and bundles' names: LaserMediaPlayer-0.1.0-release.apk rather
+/* The APKs' and bundles' names: LaserMediaPlayer-0.2.0-release.apk rather
  * than app-release.apk. */
 base {
     archivesName = "LaserMediaPlayer-$appVersion"
@@ -29,7 +29,7 @@ android {
         applicationId = "io.github.pierrebog.lasermediaplayer"
         minSdk = 23
         targetSdk = 37
-        versionCode = 1
+        versionCode = 2
         versionName = appVersion
         /* The ABIs of the libVLC AAR. */
         ndk {

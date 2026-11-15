@@ -44,7 +44,7 @@ object Credits {
     const val SOURCE = "https://github.com/liblaser/LaserMediaPlayer"
 
     const val LIBVLC_VERSION = "4.0.0-dev"
-    const val LIBLASER_VERSION = "0.3.1"
+    const val LIBLASER_VERSION = "0.3.2"
     /* Vendored in liblaser. */
     const val LIBUSB_VERSION = "1.0.30"
 

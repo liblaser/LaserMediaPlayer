@@ -46,8 +46,8 @@
     <string name="warning_decoys">Protected disc</string>
     <string name="warning_decoys_detail">playing with the menus is recommended</string>
     <plurals name="warning_region">
-        <item quantity="one">Region %2$s</item>
-        <item quantity="other">Regions %2$s</item>
+        <item quantity="one">Disc region %2$s</item>
+        <item quantity="other">Disc regions %2$s</item>
     </plurals>
     <string name="warning_region_detail">drive set to region %1$s, starting will take longer</string>
     <string name="video_part_heading">Video part</string>
@@ -144,6 +144,10 @@
     <string name="options_playback_tracks">Playback — default tracks</string>
     <string name="options_hw">Hardware decoding</string>
     <string name="options_playback_hw">Playback — hardware decoding</string>
+    <string name="options_drive">Drive</string>
+    <string name="options_playback_drive">Playback — drive</string>
+    <string name="options_limit_speed">Limit the drive\'s speed</string>
+    <string name="options_limit_speed_detail">Can reduce noise and the power the drive needs; loading may be slower</string>
     <string name="options_other">Other options</string>
     <string name="options_playback_other">Playback — other options</string>
     <string name="options_menu_arrows">Show navigation arrows in DVD and Blu-ray menus</string>

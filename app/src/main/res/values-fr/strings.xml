@@ -41,9 +41,9 @@
     <string name="warning_decoys">Disque protégé</string>
     <string name="warning_decoys_detail">la lecture avec les menus est recommandée</string>
     <plurals name="warning_region">
-        <item quantity="one">Région %2$s</item>
-        <item quantity="many">Régions %2$s</item>
-        <item quantity="other">Régions %2$s</item>
+        <item quantity="one">Disque région %2$s</item>
+        <item quantity="many">Disque régions %2$s</item>
+        <item quantity="other">Disque régions %2$s</item>
     </plurals>
     <string name="warning_region_detail">lecteur en région %1$s, le démarrage sera plus long</string>
     <string name="video_part_heading">Partie vidéo</string>
@@ -137,6 +137,10 @@
     <string name="options_playback_tracks">Lecture — pistes par défaut</string>
     <string name="options_hw">Décodage matériel</string>
     <string name="options_playback_hw">Lecture — décodage matériel</string>
+    <string name="options_drive">Lecteur</string>
+    <string name="options_playback_drive">Lecture — lecteur</string>
+    <string name="options_limit_speed">Limiter la vitesse du lecteur</string>
+    <string name="options_limit_speed_detail">Peut réduire le bruit et la puissance électrique nécessaire ; les chargements peuvent être plus lents</string>
     <string name="options_other">Autres options</string>
     <string name="options_playback_other">Lecture — autres options</string>
     <string name="options_menu_arrows">Afficher les flèches de navigation dans les menus des DVDs et Blu-rays</string>

@@ -317,8 +317,8 @@ private fun InterfacePage(settings: AppSettings, metrics: OptionsMetrics, open: 
     }
 }
 
-/** Default tracks, hardware decoding per kind of disc, the other options,
- * and the Blu-ray's key file. */
+/** Default tracks, the drive's speed, hardware decoding per kind of disc,
+ * the other options, and the Blu-ray's key file. */
 @Composable
 private fun PlaybackPage(settings: AppSettings, metrics: OptionsMetrics, open: (Picker) -> Unit) {
     val playback by settings.playback.collectAsStateWithLifecycle()
@@ -332,6 +332,14 @@ private fun PlaybackPage(settings: AppSettings, metrics: OptionsMetrics, open: (
                        metrics) { open(Picker.SUBTITLES) } },
             { SwitchRow(stringResource(R.string.options_no_subs_same), playback.noSubtitlesInInterfaceLanguage,
                         metrics) { on -> settings.updatePlayback { it.copy(noSubtitlesInInterfaceLanguage = on) } } },
+        )
+    }
+    Section(stringResource(if (tabs) R.string.options_drive else R.string.options_playback_drive),
+            metrics) {
+        Rows(
+            { SwitchRow(stringResource(R.string.options_limit_speed), playback.limitSpeed, metrics,
+                        detail = stringResource(R.string.options_limit_speed_detail)) { on ->
+                settings.updatePlayback { it.copy(limitSpeed = on) } } },
         )
     }
     Section(stringResource(if (tabs) R.string.options_hw else R.string.options_playback_hw),

@@ -45,9 +45,9 @@
     <string name="warning_decoys">Disco protegido</string>
     <string name="warning_decoys_detail">se recomienda reproducir con los menús</string>
     <plurals name="warning_region">
-        <item quantity="one">Región %2$s</item>
-        <item quantity="many">Regiones %2$s</item>
-        <item quantity="other">Regiones %2$s</item>
+        <item quantity="one">Disco de región %2$s</item>
+        <item quantity="many">Disco de regiones %2$s</item>
+        <item quantity="other">Disco de regiones %2$s</item>
     </plurals>
     <string name="warning_region_detail">unidad en la región %1$s, el inicio será más lento</string>
     <string name="video_part_heading">Parte de vídeo</string>
@@ -143,6 +143,10 @@
     <string name="options_playback_tracks">Reproducción — pistas predeterminadas</string>
     <string name="options_hw">Decodificación por hardware</string>
     <string name="options_playback_hw">Reproducción — decodificación por hardware</string>
+    <string name="options_drive">Unidad</string>
+    <string name="options_playback_drive">Reproducción — unidad</string>
+    <string name="options_limit_speed">Limitar la velocidad de la unidad</string>
+    <string name="options_limit_speed_detail">Puede reducir el ruido y la potencia eléctrica necesaria; las cargas pueden ser más lentas</string>
     <string name="options_other">Otras opciones</string>
     <string name="options_playback_other">Reproducción — otras opciones</string>
     <string name="options_menu_arrows">Mostrar flechas de navegación en los menús de DVD y Blu-ray</string>

@@ -45,8 +45,8 @@
     <string name="warning_decoys">Geschützte Disc</string>
     <string name="warning_decoys_detail">die Wiedergabe mit den Menüs wird empfohlen</string>
     <plurals name="warning_region">
-        <item quantity="one">Region %2$s</item>
-        <item quantity="other">Regionen %2$s</item>
+        <item quantity="one">Disc-Region %2$s</item>
+        <item quantity="other">Disc-Regionen %2$s</item>
     </plurals>
     <string name="warning_region_detail">Laufwerk auf Region %1$s eingestellt, der Start dauert länger</string>
     <string name="video_part_heading">Videoteil</string>
@@ -141,6 +141,10 @@
     <string name="options_playback_tracks">Wiedergabe — Standardspuren</string>
     <string name="options_hw">Hardware-Decodierung</string>
     <string name="options_playback_hw">Wiedergabe — Hardware-Decodierung</string>
+    <string name="options_drive">Laufwerk</string>
+    <string name="options_playback_drive">Wiedergabe — Laufwerk</string>
+    <string name="options_limit_speed">Laufwerksgeschwindigkeit begrenzen</string>
+    <string name="options_limit_speed_detail">Kann Geräusche und den Strombedarf verringern; das Laden kann länger dauern</string>
     <string name="options_other">Weitere Optionen</string>
     <string name="options_playback_other">Wiedergabe — weitere Optionen</string>
     <string name="options_menu_arrows">Navigationspfeile in DVD- und Blu-ray-Menüs anzeigen</string>

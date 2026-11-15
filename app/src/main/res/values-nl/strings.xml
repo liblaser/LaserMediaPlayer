@@ -45,8 +45,8 @@
     <string name="warning_decoys">Beveiligde disc</string>
     <string name="warning_decoys_detail">afspelen met de menu\'s wordt aanbevolen</string>
     <plurals name="warning_region">
-        <item quantity="one">Regio %2$s</item>
-        <item quantity="other">Regio\'s %2$s</item>
+        <item quantity="one">Disc voor regio %2$s</item>
+        <item quantity="other">Disc voor regio\'s %2$s</item>
     </plurals>
     <string name="warning_region_detail">station ingesteld op regio %1$s, het starten duurt langer</string>
     <string name="video_part_heading">Videogedeelte</string>
@@ -141,6 +141,10 @@
     <string name="options_playback_tracks">Afspelen — standaardsporen</string>
     <string name="options_hw">Hardwaredecodering</string>
     <string name="options_playback_hw">Afspelen — hardwaredecodering</string>
+    <string name="options_drive">Station</string>
+    <string name="options_playback_drive">Afspelen — station</string>
+    <string name="options_limit_speed">Snelheid van het station beperken</string>
+    <string name="options_limit_speed_detail">Kan geluid en het benodigde vermogen verminderen; laden kan langer duren</string>
     <string name="options_other">Overige opties</string>
     <string name="options_playback_other">Afspelen — overige opties</string>
     <string name="options_menu_arrows">Navigatiepijlen tonen in dvd- en Blu-ray-menu\'s</string>

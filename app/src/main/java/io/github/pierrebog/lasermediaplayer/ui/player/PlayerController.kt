@@ -246,6 +246,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
             media.setHWDecoderEnabled(hw, false)
             if (!hw) media.addOption(":codec=avcodec,all")
         }
+        speedOption?.let { media.addOption(it) }
         player.media = media
         media.release()
         mediaSet = true
@@ -637,6 +638,22 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         if (driveTaken) app.drives.endPlayback(deviceName, eject = ejectWhenStopped)
     }
 
+    /* ---- the drive's speed ---------------------------------------------- */
+
+    /**
+     * The speed asked of the drive, when the options limit it: laser.c and
+     * cdrom.c ask the drive for it as playback opens it, and give the drive
+     * its own speed back when it closes. A CD at 4x, a DVD or a Blu-ray at
+     * 2x: more than playing them takes, with room for a seek and for the
+     * drive's retries. Classifying a disc reads at the drive's own speed.
+     */
+    private val speedOption: String? =
+        if (!app.settings.playback.value.limitSpeed) null
+        else ":laser-speed=" + when (kind) {
+            DiscKind.CD_AUDIO, DiscKind.VIDEO_CD -> CD_SPEED
+            DiscKind.DVD_VIDEO, DiscKind.DVD_AUDIO, DiscKind.BLURAY -> FILM_SPEED
+        }
+
     /* ---- the wait for the first picture ---------------------------------- */
 
     /*
@@ -776,6 +793,8 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
             list.release()
             media.release()
             if (found.isEmpty()) return false
+            /* Each track opens the drive again, with its own options. */
+            speedOption?.let { option -> found.forEach { it.addOption(option) } }
             subItems = found
             _state.update { ui ->
                 ui.copy(playlist = namedPlaylist(found.map { it.duration.coerceAtLeast(0) }))
@@ -1094,6 +1113,9 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         const val LENGTH_TOLERANCE_MS = 1_000L
         const val WAIT_DELAY_MS = 1_000L
         const val WAIT_WATCH_MS = 500L
+        /* Times the medium's nominal speed - see speedOption. */
+        const val CD_SPEED = 4
+        const val FILM_SPEED = 2
     }
 }
 

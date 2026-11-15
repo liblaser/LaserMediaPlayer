@@ -34,8 +34,8 @@ enum class AppLanguage(val tag: String, val nativeName: String) {
 }
 
 /**
- * The tracks a disc starts with when nothing is remembered for it, and the
- * hardware decoding of each kind of video disc.
+ * The tracks a disc starts with when nothing is remembered for it, the
+ * hardware decoding of each kind of video disc, and the drive's speed.
  *
  * @param audio [TrackPref.ORIGINAL], [TrackPref.INTERFACE] or an ISO 639-1 code
  * @param subtitles [TrackPref.NONE], [TrackPref.INTERFACE] or an ISO 639-1 code
@@ -51,6 +51,9 @@ data class PlaybackDefaults(
     val hwBluray: Boolean = true,
     /** The arrow pad over a DVD's or a Blu-ray's menu, on a touch screen. */
     val menuArrows: Boolean = true,
+    /** The drive reads no faster than playback needs, with some margin: a
+     * quieter drive, drawing less power. */
+    val limitSpeed: Boolean = false,
 )
 
 object TrackPref {
@@ -131,6 +134,7 @@ class AppSettings(context: Context) {
             putBoolean(KEY_HW_DVD, p.hwDvd)
             putBoolean(KEY_HW_BLURAY, p.hwBluray)
             putBoolean(KEY_MENU_ARROWS, p.menuArrows)
+            putBoolean(KEY_LIMIT_SPEED, p.limitSpeed)
         }
     }
 
@@ -144,6 +148,7 @@ class AppSettings(context: Context) {
             hwDvd = prefs.getBoolean(KEY_HW_DVD, d.hwDvd),
             hwBluray = prefs.getBoolean(KEY_HW_BLURAY, d.hwBluray),
             menuArrows = prefs.getBoolean(KEY_MENU_ARROWS, d.menuArrows),
+            limitSpeed = prefs.getBoolean(KEY_LIMIT_SPEED, d.limitSpeed),
         )
     }
 
@@ -214,6 +219,7 @@ class AppSettings(context: Context) {
         const val KEY_HW_DVD = "hw_dvd"
         const val KEY_MENU_ARROWS = "menu_arrows"
         const val KEY_HW_BLURAY = "hw_bluray"
+        const val KEY_LIMIT_SPEED = "limit_speed"
         const val KEY_ALBUMS = "lookup_albums"
         const val KEY_FILMS = "lookup_films"
         const val KEY_TMDB = "tmdb_key"
