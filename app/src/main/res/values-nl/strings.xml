@@ -154,7 +154,8 @@
     <string name="options_playback_other">Afspelen — overige opties</string>
     <string name="options_menu_arrows">Navigatiepijlen tonen in dvd- en Blu-ray-menu\'s</string>
     <string name="options_playback_bluray">Afspelen — Blu-ray</string>
-    <string name="options_hw_hint">Uitschakelen als het beeld hapert of fouten vertoont met dit soort disc.</string>
+    <string name="options_hw_hint">Uitschakelen als het beeld hapert of fouten vertoont met dit videoformaat.</string>
+    <string name="options_hw_mpeg_detail">VCD, SVCD, dvd, Blu-ray-menu\'s</string>
     <string name="options_audio_language">Audiotaal</string>
     <string name="options_no_subs_same">Geen ondertitels als de audio in de taal van de interface is</string>
     <string name="pref_original_language">Originele taal</string>

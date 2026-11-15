@@ -317,7 +317,7 @@ private fun InterfacePage(settings: AppSettings, metrics: OptionsMetrics, open: 
     }
 }
 
-/** Default tracks, the drive's speed, hardware decoding per kind of disc,
+/** Default tracks, the drive's speed, hardware decoding per video codec,
  * the other options, and the Blu-ray's key file. */
 @Composable
 private fun PlaybackPage(settings: AppSettings, metrics: OptionsMetrics, open: (Picker) -> Unit) {
@@ -345,12 +345,13 @@ private fun PlaybackPage(settings: AppSettings, metrics: OptionsMetrics, open: (
     Section(stringResource(if (tabs) R.string.options_hw else R.string.options_playback_hw),
             metrics, hint = stringResource(R.string.options_hw_hint)) {
         Rows(
-            { SwitchRow("VCD/SVCD", playback.hwVcd, metrics) { on ->
-                settings.updatePlayback { it.copy(hwVcd = on) } } },
-            { SwitchRow("DVD", playback.hwDvd, metrics) { on ->
-                settings.updatePlayback { it.copy(hwDvd = on) } } },
-            { SwitchRow("Blu-ray", playback.hwBluray, metrics) { on ->
-                settings.updatePlayback { it.copy(hwBluray = on) } } },
+            { SwitchRow("MPEG-1 / MPEG-2", playback.hwMpeg, metrics,
+                        detail = stringResource(R.string.options_hw_mpeg_detail)) { on ->
+                settings.updatePlayback { it.copy(hwMpeg = on) } } },
+            { SwitchRow("H.264", playback.hwH264, metrics, detail = "Blu-ray") { on ->
+                settings.updatePlayback { it.copy(hwH264 = on) } } },
+            { SwitchRow("VC-1", playback.hwVc1, metrics, detail = "Blu-ray") { on ->
+                settings.updatePlayback { it.copy(hwVc1 = on) } } },
         )
     }
     /* The arrow pad shows on touch screens only: nothing to change on a TV. */

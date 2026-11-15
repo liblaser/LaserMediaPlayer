@@ -154,7 +154,8 @@
     <string name="options_playback_other">Wiedergabe — weitere Optionen</string>
     <string name="options_menu_arrows">Navigationspfeile in DVD- und Blu-ray-Menüs anzeigen</string>
     <string name="options_playback_bluray">Wiedergabe — Blu-ray</string>
-    <string name="options_hw_hint">Deaktivieren, wenn das Bild bei dieser Art von Disc ruckelt oder Fehler zeigt.</string>
+    <string name="options_hw_hint">Deaktivieren, wenn das Bild bei diesem Videoformat ruckelt oder Fehler zeigt.</string>
+    <string name="options_hw_mpeg_detail">VCD, SVCD, DVD, Blu-ray-Menüs</string>
     <string name="options_audio_language">Audiosprache</string>
     <string name="options_no_subs_same">Keine Untertitel, wenn der Ton in der Sprache der Oberfläche ist</string>
     <string name="pref_original_language">Originalsprache</string>

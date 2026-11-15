@@ -156,7 +156,8 @@
     <string name="options_playback_other">Reprodução — outras opções</string>
     <string name="options_menu_arrows">Mostrar setas de navegação nos menus de DVD e Blu-ray</string>
     <string name="options_playback_bluray">Reprodução — Blu-ray</string>
-    <string name="options_hw_hint">Desative se a imagem travar ou apresentar defeitos com este tipo de disco.</string>
+    <string name="options_hw_hint">Desative se a imagem travar ou apresentar defeitos com este formato de vídeo.</string>
+    <string name="options_hw_mpeg_detail">VCD, SVCD, DVD, menus de Blu-ray</string>
     <string name="options_audio_language">Idioma do áudio</string>
     <string name="options_no_subs_same">Sem legendas se o áudio estiver no idioma da interface</string>
     <string name="pref_original_language">Idioma original</string>

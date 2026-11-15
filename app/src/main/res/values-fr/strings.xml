@@ -150,7 +150,8 @@
     <string name="options_playback_other">Lecture — autres options</string>
     <string name="options_menu_arrows">Afficher les flèches de navigation dans les menus des DVDs et Blu-rays</string>
     <string name="options_playback_bluray">Lecture — Blu-ray</string>
-    <string name="options_hw_hint">À désactiver si l\'image saccade ou présente des défauts avec ce type de disque.</string>
+    <string name="options_hw_hint">À désactiver si l\'image saccade ou présente des défauts avec ce format vidéo.</string>
+    <string name="options_hw_mpeg_detail">VCD, SVCD, DVD, menus Blu-ray</string>
     <string name="options_audio_language">Langue audio</string>
     <string name="options_no_subs_same">Pas de sous-titres si l\'audio est dans la langue de l\'interface</string>
     <string name="pref_original_language">Langue d\'origine</string>

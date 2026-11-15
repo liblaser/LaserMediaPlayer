@@ -35,7 +35,7 @@ enum class AppLanguage(val tag: String, val nativeName: String) {
 
 /**
  * The tracks a disc starts with when nothing is remembered for it, the
- * hardware decoding of each kind of video disc, and the drive's speed.
+ * hardware decoding of each video codec, and the drive's speed.
  *
  * @param audio [TrackPref.ORIGINAL], [TrackPref.INTERFACE] or an ISO 639-1 code
  * @param subtitles [TrackPref.NONE], [TrackPref.INTERFACE] or an ISO 639-1 code
@@ -46,15 +46,24 @@ data class PlaybackDefaults(
     val audio: String = TrackPref.ORIGINAL,
     val subtitles: String = TrackPref.INTERFACE,
     val noSubtitlesInInterfaceLanguage: Boolean = true,
-    val hwVcd: Boolean = true,
-    val hwDvd: Boolean = true,
-    val hwBluray: Boolean = true,
+    /** Hardware decoding of MPEG-1 and MPEG-2: VCD, SVCD, DVD, Blu-ray
+     * menus and early films. */
+    val hwMpeg: Boolean = true,
+    /** Of H.264, and of VC-1: Blu-ray. */
+    val hwH264: Boolean = true,
+    val hwVc1: Boolean = true,
     /** The arrow pad over a DVD's or a Blu-ray's menu, on a touch screen. */
     val menuArrows: Boolean = true,
     /** The drive reads no faster than playback needs, with some margin: a
      * quieter drive, drawing less power. */
     val limitSpeed: Boolean = false,
-)
+) {
+    /** The codecs left to the software decoder, as VLC's mediacodec-exclude
+     * names them; empty when hardware decodes all of them. */
+    val softwareCodecs: List<String>
+        get() = listOfNotNull("mpeg2".takeIf { !hwMpeg }, "h264".takeIf { !hwH264 },
+                              "vc1".takeIf { !hwVc1 })
+}
 
 object TrackPref {
     const val ORIGINAL = "original"
@@ -130,9 +139,9 @@ class AppSettings(context: Context) {
             putString(KEY_AUDIO, p.audio)
             putString(KEY_SUBTITLES, p.subtitles)
             putBoolean(KEY_NO_SUBS, p.noSubtitlesInInterfaceLanguage)
-            putBoolean(KEY_HW_VCD, p.hwVcd)
-            putBoolean(KEY_HW_DVD, p.hwDvd)
-            putBoolean(KEY_HW_BLURAY, p.hwBluray)
+            putBoolean(KEY_HW_MPEG, p.hwMpeg)
+            putBoolean(KEY_HW_H264, p.hwH264)
+            putBoolean(KEY_HW_VC1, p.hwVc1)
             putBoolean(KEY_MENU_ARROWS, p.menuArrows)
             putBoolean(KEY_LIMIT_SPEED, p.limitSpeed)
         }
@@ -144,9 +153,14 @@ class AppSettings(context: Context) {
             audio = prefs.getString(KEY_AUDIO, null) ?: d.audio,
             subtitles = prefs.getString(KEY_SUBTITLES, null) ?: d.subtitles,
             noSubtitlesInInterfaceLanguage = prefs.getBoolean(KEY_NO_SUBS, d.noSubtitlesInInterfaceLanguage),
-            hwVcd = prefs.getBoolean(KEY_HW_VCD, d.hwVcd),
-            hwDvd = prefs.getBoolean(KEY_HW_DVD, d.hwDvd),
-            hwBluray = prefs.getBoolean(KEY_HW_BLURAY, d.hwBluray),
+            /* Until set, from the switches per kind of disc they replace:
+             * MPEG off if it was for the VCD or the DVD, H.264 and VC-1 as
+             * the Blu-ray's. */
+            hwMpeg = prefs.getBoolean(KEY_HW_MPEG,
+                                      prefs.getBoolean(OLD_KEY_HW_VCD, d.hwMpeg) &&
+                                          prefs.getBoolean(OLD_KEY_HW_DVD, d.hwMpeg)),
+            hwH264 = prefs.getBoolean(KEY_HW_H264, prefs.getBoolean(OLD_KEY_HW_BLURAY, d.hwH264)),
+            hwVc1 = prefs.getBoolean(KEY_HW_VC1, prefs.getBoolean(OLD_KEY_HW_BLURAY, d.hwVc1)),
             menuArrows = prefs.getBoolean(KEY_MENU_ARROWS, d.menuArrows),
             limitSpeed = prefs.getBoolean(KEY_LIMIT_SPEED, d.limitSpeed),
         )
@@ -215,10 +229,14 @@ class AppSettings(context: Context) {
         const val KEY_AUDIO = "audio"
         const val KEY_SUBTITLES = "subtitles"
         const val KEY_NO_SUBS = "no_subs_in_interface_language"
-        const val KEY_HW_VCD = "hw_vcd"
-        const val KEY_HW_DVD = "hw_dvd"
+        const val KEY_HW_MPEG = "hw_mpeg"
+        const val KEY_HW_H264 = "hw_h264"
+        const val KEY_HW_VC1 = "hw_vc1"
+        /* The switches per kind of disc, read until the new ones are set. */
+        const val OLD_KEY_HW_VCD = "hw_vcd"
+        const val OLD_KEY_HW_DVD = "hw_dvd"
+        const val OLD_KEY_HW_BLURAY = "hw_bluray"
         const val KEY_MENU_ARROWS = "menu_arrows"
-        const val KEY_HW_BLURAY = "hw_bluray"
         const val KEY_LIMIT_SPEED = "limit_speed"
         const val KEY_ALBUMS = "lookup_albums"
         const val KEY_FILMS = "lookup_films"

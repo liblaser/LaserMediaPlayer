@@ -191,12 +191,14 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
      * Playback stops when it leaves that title, once reached. A Blu-ray's
      * episode, without the menus: see selectEpisode(). Numbered as libVLC
      * numbers them, from 0; -1 when unknown, and dvdread goes on. */
-    private val titleToPlay = when {
-        kind == DiscKind.DVD_VIDEO && request.row.mode == PlayMode.NO_MENUS ->
-            request.resume?.title?.takeIf { it >= 0 } ?: request.startTitle?.let { it - 1 } ?: -1
-        kind == DiscKind.BLURAY && ":no-bluray-menu" in request.options &&
-            request.disc.seriesEpisodes.any { it.title == request.startTitle } ->
-            request.resume?.title?.takeIf { it >= 0 } ?: request.startTitle ?: -1
+    private val titleToPlay = when (kind) {
+        DiscKind.DVD_VIDEO ->
+            if (request.row.mode != PlayMode.NO_MENUS) -1
+            else request.resume?.title?.takeIf { it >= 0 } ?: request.startTitle?.let { it - 1 } ?: -1
+        DiscKind.BLURAY ->
+            if (":no-bluray-menu" !in request.options ||
+                request.disc.seriesEpisodes.none { it.title == request.startTitle }) -1
+            else request.resume?.title?.takeIf { it >= 0 } ?: request.startTitle ?: -1
         else -> -1
     }
     private var titleReached = false
@@ -235,21 +237,17 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
             media.addOption(":menu-language=$lang")
             media.addOption(":audio-language=$lang")
         }
-        /* Hardware decoding, per kind of disc, from the options: a DVD's
-         * MPEG-2 is often badly served by old devices' decoders.
-         * setHWDecoderEnabled(false) leaves libVLC its own decoder order -
-         * ":codec=all" - in which LibVLC 4 still tries MediaCodec first: off
-         * is said explicitly, the software decoder first. */
-        val hardware = app.settings.playback.value
-        val hw = when (kind) {
-            DiscKind.VIDEO_CD -> hardware.hwVcd
-            DiscKind.DVD_VIDEO -> hardware.hwDvd
-            DiscKind.BLURAY -> hardware.hwBluray
-            else -> null
-        }
-        if (hw != null) {
-            media.setHWDecoderEnabled(hw, false)
-            if (!hw) media.addOption(":codec=avcodec,all")
+        /* Hardware decoding, per video codec, from the options: MediaCodec
+         * first - not forced, the software decoder after it - and the codecs
+         * switched off left to the software decoder by VLC's
+         * mediacodec-exclude, stream by stream. A Blu-ray's H.264 film is
+         * then decoded by the device while its MPEG-2 menus are not, which
+         * an old device's MPEG-2 decoder may get wrong. */
+        if (kind == DiscKind.VIDEO_CD || kind.isFilm) {
+            media.setHWDecoderEnabled(true, false)
+            app.settings.playback.value.softwareCodecs.takeIf { it.isNotEmpty() }?.let {
+                media.addOption(":mediacodec-exclude=" + it.joinToString(","))
+            }
         }
         speedOption?.let { media.addOption(it) }
         player.media = media

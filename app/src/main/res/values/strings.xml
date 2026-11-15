@@ -157,7 +157,8 @@
     <string name="options_playback_other">Playback — other options</string>
     <string name="options_menu_arrows">Show navigation arrows in DVD and Blu-ray menus</string>
     <string name="options_playback_bluray">Playback — Blu-ray</string>
-    <string name="options_hw_hint">Turn off if the picture stutters or shows defects with this kind of disc.</string>
+    <string name="options_hw_hint">Turn off if the picture stutters or shows defects with this video format.</string>
+    <string name="options_hw_mpeg_detail">VCD, SVCD, DVD, Blu-ray menus</string>
     <string name="options_audio_language">Audio language</string>
     <string name="options_no_subs_same">No subtitles when the audio is in the interface language</string>
     <string name="pref_original_language">Original language</string>
