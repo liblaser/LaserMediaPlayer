@@ -9,6 +9,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -57,6 +58,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.pierrebog.lasermediaplayer.R
 import io.github.pierrebog.lasermediaplayer.disc.DiscInfo
 import io.github.pierrebog.lasermediaplayer.disc.DiscKind
+import io.github.pierrebog.lasermediaplayer.disc.EpisodeInfo
 import io.github.pierrebog.lasermediaplayer.disc.withTracksOf
 import io.github.pierrebog.lasermediaplayer.drive.Drive
 import io.github.pierrebog.lasermediaplayer.drive.DriveStatus
@@ -71,7 +73,7 @@ import io.github.pierrebog.lasermediaplayer.ui.theme.keyNavigation
 import io.github.pierrebog.lasermediaplayer.ui.theme.LaserColors
 import io.github.pierrebog.lasermediaplayer.ui.theme.LaserType
 
-private enum class Sheet { AUDIO, SUBTITLES, VERSION }
+private enum class Sheet { AUDIO, SUBTITLES, VERSION, EPISODE }
 
 /**
  * The only screen besides the player: the drives, and the disc in the one
@@ -191,6 +193,7 @@ fun HomeScreen(vm: HomeViewModel, onPlay: (PlaybackRequest) -> Unit, onOptions: 
                             onAudio = { sheet = Sheet.AUDIO },
                             onSubtitles = { sheet = Sheet.SUBTITLES },
                             onVersion = { sheet = Sheet.VERSION },
+                            onEpisode = { sheet = Sheet.EPISODE },
                         )
                 }
             }
@@ -204,6 +207,9 @@ fun HomeScreen(vm: HomeViewModel, onPlay: (PlaybackRequest) -> Unit, onOptions: 
                 onDismiss = { sheet = null })
             Sheet.VERSION -> VersionSheet(disc, state.version, form,
                 onPick = { vm.chooseVersion(disc, it); sheet = null },
+                onDismiss = { sheet = null })
+            Sheet.EPISODE -> EpisodeSheet(disc, state.episode, form,
+                onPick = { vm.chooseEpisode(disc, it); sheet = null },
                 onDismiss = { sheet = null })
             null -> {}
         }
@@ -340,6 +346,7 @@ private fun DiscPanel(
     onAudio: () -> Unit,
     onSubtitles: () -> Unit,
     onVersion: () -> Unit,
+    onEpisode: () -> Unit,
 ) {
     val metrics = if (form == FormFactor.TV) TvMetrics else PhoneMetrics
     /* Lookup off: no case, a larger title - "sans affiche" in the mockups. */
@@ -363,12 +370,14 @@ private fun DiscPanel(
              * year or a film's year, from the lookups, at the left and the
              * length at the right, then the progress bar - always shown, empty
              * until there is something to resume. The length is the resumed
-             * title's, else the main title's, the CD's or the DVD-Audio's. */
+             * title's, else the episode's or the version's, else the main
+             * title's, the CD's or the DVD-Audio's. */
             Column(verticalArrangement = Arrangement.spacedBy(if (form == FormFactor.TV) 6.dp else 4.dp)) {
                 Text(discTitle(disc), style = LaserType.DiscTitle,
                      fontSize = titleSize, lineHeight = titleSize * 1.04f)
                 val byline = listOfNotNull(disc.album?.artist, disc.year).joinToString(" · ")
                 val length = state.resume?.lengthMs?.takeIf { it > 0 }
+                    ?: state.episode?.lengthMs
                     ?: state.version?.lengthMs
                     ?: disc.mainLengthMs.takeIf { it > 0 }
                     ?: disc.cdTracks.sum().takeIf { it > 0 }
@@ -396,6 +405,12 @@ private fun DiscPanel(
              * which skips them, and from the start - under a heading, and
              * playing with the menus comes after, apart. */
             val tracks: @Composable () -> Unit = {
+                state.episode?.let { episode ->
+                    val text = episodeLabel(disc, episode)
+                    TrackButton(R.drawable.ic_versions, text,
+                                stringResource(R.string.episode) + ", " + text,
+                                metrics, onEpisode, Modifier.fillMaxWidth())
+                }
                 state.version?.let { version ->
                     val text = versionLabel(version, disc.versions).let {
                         if (disc.versions.size == 2) "$it · ${formatTime(version.lengthMs)}" else it
@@ -583,6 +598,38 @@ private fun TrackRow(
                         stringResource(R.string.subtitles) + ", " + subText,
                         metrics, onSubtitles, Modifier.weight(1f))
     }
+}
+
+/** An episode as TMDB names it - "5. Day of Days" - else by its number in
+ * its season, else on the disc. */
+@Composable
+private fun episodeLabel(disc: DiscInfo, episode: EpisodeInfo): String {
+    val name = disc.episodeName(episode)
+    return when {
+        name == null -> stringResource(R.string.episode_number, disc.seriesEpisodes.indexOf(episode) + 1)
+        name.name.isBlank() -> stringResource(R.string.episode_number, name.number)
+        else -> stringResource(R.string.episode_named, name.number, name.name)
+    }
+}
+
+/** The episodes to choose from, by number, each with its length. */
+@Composable
+private fun BoxScope.EpisodeSheet(
+    disc: DiscInfo,
+    current: EpisodeInfo?,
+    form: FormFactor,
+    onPick: (EpisodeInfo) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val episodes = disc.seriesEpisodes
+    TrackSheet(
+        title = stringResource(R.string.episode),
+        options = episodes.map { TrackOption(episodeLabel(disc, it), formatTime(it.lengthMs)) },
+        selected = episodes.indexOf(current),
+        form = form,
+        onPick = { i -> onPick(episodes[i]) },
+        onDismiss = onDismiss,
+    )
 }
 
 @Composable

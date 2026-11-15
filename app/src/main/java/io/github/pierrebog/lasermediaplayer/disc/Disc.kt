@@ -119,6 +119,21 @@ fun DiscInfo.withTracksOf(version: VersionInfo?): DiscInfo {
 }
 
 /**
+ * One episode of a series on a DVD or a Blu-ray, as laser.c found it: a
+ * title of about the others' length playing content of its own.
+ *
+ * @param title as the row's "#title" numbers it: on a DVD, its number in the
+ *              disc's title table, from 1, as dvdread numbers its titles; on
+ *              a Blu-ray, the playlist's place among those the bluray demuxer
+ *              lists without menus, from 0 - libVLC's title then
+ */
+data class EpisodeInfo(val title: Int, val lengthMs: Long)
+
+/** An episode as TMDB knows it: its number in its season, and its name -
+ * empty if TMDB has none. */
+data class EpisodeName(val number: Int, val name: String)
+
+/**
  * A DVD the drive's region forbids, as laser.c found it: the regions, 1 to 8,
  * the disc is coded for and those the drive is set to. It still plays: a
  * region-1 disc did on a region-2 drive, slower to start.
@@ -187,6 +202,10 @@ data class DiscInfo(
      * several languages, played by the audio track chosen: none, or two or
      * more. */
     val variants: List<VersionInfo> = emptyList(),
+    /** What may be a series' episodes, from laser.c, by number: none, or two
+     * or more. A film with a long documentary looks the same: see
+     * [seriesEpisodes]. */
+    val episodes: List<EpisodeInfo> = emptyList(),
     /** The film on a video disc, from TMDB. */
     val film: FilmInfo? = null,
     /** The lookup of its name and picture is over, found or not - or there
@@ -202,6 +221,17 @@ data class DiscInfo(
     /** The title's "Disc 2", shown after the title, found or not. */
     val discPart: String?
         get() = FilmLookup.discPartOf(title)
+
+    /** The episodes to choose from: [episodes] when the disc is a series -
+     * TMDB found one, or its title names a season ("FRIENDS_S1_D2") - else
+     * none. */
+    val seriesEpisodes: List<EpisodeInfo>
+        get() = if (episodes.size >= 2 &&
+                    (film?.series == true || FilmLookup.showOf(title) != null)) episodes
+                else emptyList()
+
+    /** [episode]'s number and name, if TMDB knows them. */
+    fun episodeName(episode: EpisodeInfo): EpisodeName? = film?.episodes?.get(episode.title)
 
     /** The album's cover or the film's poster. */
     val cover: File?
@@ -295,6 +325,8 @@ object TrackLists {
     /* title,length,chapters,audio,spu, one version per line, the shortest
      * first; audio and spu are hexadecimal masks of the track ids */
     const val VERSIONS_META = "laser-versions"
+    /* title,length, one episode per line, by number */
+    const val EPISODES_META = "laser-episodes"
     /* Versions closer in length than this, in percent of the longest, are
      * one version for the user: one cut, localised. */
     private const val VERSION_SAME_PERCENT = 3
@@ -339,6 +371,19 @@ object TrackLists {
             if (group.size < 2) first
             else first.copy(lengthMs = group.maxOf { it.lengthMs }, variants = group.sortedBy { it.title })
         }
+    }
+
+    /** The episodes laser.c found: two or more, else none. A malformed line
+     * is skipped. */
+    fun parseEpisodes(value: String?): List<EpisodeInfo> {
+        val episodes = value.orEmpty().lineSequence().mapNotNull { line ->
+            val f = line.split(',')
+            if (f.size < 2) return@mapNotNull null
+            val title = f[0].toIntOrNull()?.takeIf { it >= 0 } ?: return@mapNotNull null
+            val length = f[1].toLongOrNull()?.takeIf { it > 0 } ?: return@mapNotNull null
+            EpisodeInfo(title, length)
+        }.toList()
+        return if (episodes.size >= 2) episodes else emptyList()
     }
 
     /* A hexadecimal mask of track ids, bit 0 for id 0; null when absent or

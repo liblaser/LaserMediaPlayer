@@ -186,14 +186,19 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
     private var playedOnce = false
 
     /* A DVD without its menus: dvdread plays the title asked for - the
-     * version chosen, the main title, the title resumed - then goes on to
-     * the next ones: extras, trailers, a protection's decoys. Playback stops
-     * when it leaves that title, once reached. Numbered as libVLC numbers
-     * them, from 0; -1 when unknown, and dvdread goes on. */
-    private val titleToPlay =
-        if (kind != DiscKind.DVD_VIDEO || request.row.mode != PlayMode.NO_MENUS) -1
-        else request.resume?.title?.takeIf { it >= 0 }
-            ?: request.startTitle?.let { it - 1 } ?: -1
+     * version chosen, an episode, the main title, the title resumed - then
+     * goes on to the next ones: extras, trailers, a protection's decoys.
+     * Playback stops when it leaves that title, once reached. A Blu-ray's
+     * episode, without the menus: see selectEpisode(). Numbered as libVLC
+     * numbers them, from 0; -1 when unknown, and dvdread goes on. */
+    private val titleToPlay = when {
+        kind == DiscKind.DVD_VIDEO && request.row.mode == PlayMode.NO_MENUS ->
+            request.resume?.title?.takeIf { it >= 0 } ?: request.startTitle?.let { it - 1 } ?: -1
+        kind == DiscKind.BLURAY && ":no-bluray-menu" in request.options &&
+            request.disc.seriesEpisodes.any { it.title == request.startTitle } ->
+            request.resume?.title?.takeIf { it >= 0 } ?: request.startTitle ?: -1
+        else -> -1
+    }
     private var titleReached = false
 
     /**
@@ -531,6 +536,7 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
                 switching = false
                 playedOnce = true
                 _state.update { it.copy(playing = true) }
+                selectEpisode()
                 applyResume()
                 noteVersion()
                 refreshMenuState()
@@ -617,6 +623,23 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         playedVersion?.let { app.resume.savePoint(request.disc, ResumePoint(-1, 0, 0), it) }
         _state.update { it.copy(playing = false, ended = true) }
         return true
+    }
+
+    /* The Blu-ray episode was selected. */
+    private var episodeSelected = false
+
+    /**
+     * A Blu-ray's episode, without the menus: selected once playback has
+     * started. The MRL's "#title" cannot - VLC applies one from title 1 on,
+     * and the first episode may be title 0 - and the bluray demuxer starts
+     * with the disc's main title. A resumed episode is selected by
+     * applyResume().
+     */
+    private fun selectEpisode() {
+        if (episodeSelected || kind != DiscKind.BLURAY || titleToPlay < 0) return
+        episodeSelected = true
+        if (request.resume?.title == titleToPlay) return
+        if (player.title != titleToPlay) player.title = titleToPlay
     }
 
     private fun finish() {

@@ -7,6 +7,7 @@ import io.github.pierrebog.lasermediaplayer.LaserApp
 import io.github.pierrebog.lasermediaplayer.disc.DiscInfo
 import io.github.pierrebog.lasermediaplayer.disc.DiscKind
 import io.github.pierrebog.lasermediaplayer.disc.DiscRow
+import io.github.pierrebog.lasermediaplayer.disc.EpisodeInfo
 import io.github.pierrebog.lasermediaplayer.disc.PlayMode
 import io.github.pierrebog.lasermediaplayer.disc.VersionInfo
 import io.github.pierrebog.lasermediaplayer.disc.pickVariant
@@ -35,8 +36,10 @@ data class PlaybackRequest(
     val resume: ResumePoint?,
     val tracks: TrackChoice,
     /** The title to start, as the MRL gives it (see LaserMrl.withTitle) -
-     * from 1, as dvdread numbers its titles: the version chosen, or the main
-     * title, played without the menus. Null for the demuxer's own start. */
+     * from 1, as dvdread numbers its titles: the version chosen, the episode
+     * chosen, or the main title, played without the menus. A Blu-ray's
+     * episode, from 0 (see EpisodeInfo.title). Null for the demuxer's own
+     * start. */
     val startTitle: Int? = null,
 )
 
@@ -52,6 +55,8 @@ data class HomeState(
     val tracks: TrackChoice = TrackChoice(null, null),
     /** The version of the film to play, when the disc has several. */
     val version: VersionInfo? = null,
+    /** The episode to play without the menus, when the disc is a series'. */
+    val episode: EpisodeInfo? = null,
     /** Which lookups are on: without one, no cover or poster is shown. */
     val lookups: LookupSettings = LookupSettings(),
     /** libbluray's BD-J jars are copied: Blu-ray menus can be offered. */
@@ -73,22 +78,26 @@ class HomeViewModel(private val app: LaserApp) : ViewModel() {
             ?: drives.firstOrNull { it.status is DriveStatus.Ready }
             ?: drives.firstOrNull()
         val disc = (selected?.status as? DriveStatus.Ready)?.disc
-        val version = disc?.let { versionFor(it) }
+        val episode = disc?.let { episodeFor(it) }
+        /* A series' episodes are not a film's versions. */
+        val version = disc?.takeIf { episode == null }?.let { versionFor(it) }
         HomeState(
             drives = drives,
             selected = selected,
             probing = probing,
             /* With versions, the chosen one's: another's means nothing. A
              * point the disc cannot resume - one from its audio part - is
-             * none. */
+             * none; so is one in another episode than the one chosen. */
             resume = disc?.let { d ->
-                app.resume.resumePoint(d, version?.title)?.takeIf { resumeRow(d, it) != null }
+                app.resume.resumePoint(d, version?.title)
+                    ?.takeIf { resumeRow(d, it) != null && inEpisode(it, episode) }
             },
             /* Those the version carries: another's commentary, or a
              * language the version has no variant in, would play nothing. */
             tracks = disc?.let { tracksFor(it.withTracksOf(version), defaults) }
                 ?: TrackChoice(null, null),
             version = version,
+            episode = episode,
             lookups = lookups,
             blurayMenus = blurayMenus,
         )
@@ -122,6 +131,30 @@ class HomeViewModel(private val app: LaserApp) : ViewModel() {
             ?: disc.versions.maxByOrNull { it.lengthMs }
     }
 
+    /** The episode chosen, or last played, on [disc], else its first; null
+     * if the disc is not a series'. */
+    private fun episodeFor(disc: DiscInfo): EpisodeInfo? {
+        val episodes = disc.seriesEpisodes
+        if (episodes.isEmpty()) return null
+        val chosen = app.resume.episode(disc)
+        return episodes.firstOrNull { it.title == chosen } ?: episodes.first()
+    }
+
+    /**
+     * Whether [point] is in [episode], when there is one: a point saved
+     * without the menus is in the title it gives - libVLC's, from 0 as
+     * dvdread numbers them from 1 - and one saved with them, or whose title
+     * is unknown, in none in particular.
+     */
+    private fun inEpisode(point: ResumePoint, episode: EpisodeInfo?): Boolean {
+        if (episode == null || point.title < 0) return true
+        return when {
+            ":no-bluray-menu" in point.options -> point.title == episode.title
+            point.mode == PlayMode.NO_MENUS -> point.title == episode.title - 1
+            else -> true
+        }
+    }
+
     fun select(drive: Drive) {
         selectedName.value = drive.deviceName
     }
@@ -140,6 +173,11 @@ class HomeViewModel(private val app: LaserApp) : ViewModel() {
 
     fun chooseVersion(disc: DiscInfo, version: VersionInfo) {
         app.resume.saveVersion(disc, version.title)
+        stored.value++
+    }
+
+    fun chooseEpisode(disc: DiscInfo, episode: EpisodeInfo) {
+        app.resume.saveEpisode(disc, episode.title)
         stored.value++
     }
 
@@ -196,8 +234,13 @@ class HomeViewModel(private val app: LaserApp) : ViewModel() {
          * the audio track's language. A resumed point has its own title. */
         val variant = pickVariant(state.version?.variants ?: disc.variants,
                                   state.tracks.audioId, state.tracks.subtitleId)
-        val startTitle = ((variant ?: state.version)?.title ?: disc.mainTitle)
-            ?.takeIf { resume == null && row.kind == DiscKind.DVD_VIDEO && row.mode == PlayMode.NO_MENUS }
+        val dvdNoMenus = row.kind == DiscKind.DVD_VIDEO && row.mode == PlayMode.NO_MENUS
+        val bdNoMenus = row.kind == DiscKind.BLURAY && ":no-bluray-menu" in options
+        /* A series' episode chosen, played alone: remembered as played. */
+        val episode = state.episode?.takeIf { resume == null && (dvdNoMenus || bdNoMenus) }
+        episode?.let { app.resume.saveEpisode(disc, it.title) }
+        val startTitle = episode?.title
+            ?: ((variant ?: state.version)?.title ?: disc.mainTitle)?.takeIf { resume == null && dvdNoMenus }
         return PlaybackRequest(disc, row, options, resume, state.tracks, startTitle)
     }
 

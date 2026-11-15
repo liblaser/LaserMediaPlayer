@@ -131,6 +131,16 @@ class ResumeStore(context: Context) {
         prefs.edit { putInt("${disc.key}|version", title) }
     }
 
+    /** The episode chosen, or last played, on [disc], by its title as
+     * [io.github.pierrebog.lasermediaplayer.disc.EpisodeInfo.title] gives it;
+     * null if none was. */
+    fun episode(disc: DiscInfo): Int? =
+        prefs.getInt("${disc.key}|episode", -1).takeIf { it >= 0 }
+
+    fun saveEpisode(disc: DiscInfo, title: Int) {
+        prefs.edit { putInt("${disc.key}|episode", title) }
+    }
+
     /** True if the picture was last made to fill the screen, cropped, for
      * [disc]. */
     fun fillScreen(disc: DiscInfo): Boolean = prefs.getBoolean("${disc.key}|fill", false)

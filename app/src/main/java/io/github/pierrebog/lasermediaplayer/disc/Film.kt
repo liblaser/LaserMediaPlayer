@@ -7,6 +7,7 @@ import io.github.pierrebog.lasermediaplayer.settings.AppSettings
 import io.github.pierrebog.lasermediaplayer.settings.interfaceLocale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
@@ -17,9 +18,12 @@ import kotlin.math.abs
 import kotlin.math.max
 
 /** The film on a video disc, as TMDB knows it, in the interface's [language];
- * [originalLanguage] is ISO 639-1, as TMDB gives it. */
+ * [originalLanguage] is ISO 639-1, as TMDB gives it. A [series]' disc may
+ * have its [episodes] named: by their title, as [EpisodeInfo.title] gives
+ * it. */
 data class FilmInfo(val title: String, val year: String?, val poster: File?, val language: String,
-                    val originalLanguage: String? = null)
+                    val originalLanguage: String? = null, val series: Boolean = false,
+                    val episodes: Map<Int, EpisodeName> = emptyMap())
 
 /**
  * Finds the film on a DVD or a Blu-ray, for the disc screen: a decoration,
@@ -36,6 +40,10 @@ data class FilmInfo(val title: String, val year: String?, val poster: File?, val
  * each language. A failed request is tried again next time, and so is a
  * poster that could not be downloaded.
  *
+ * A series' disc of several episodes has them named, when the season and
+ * which of its episodes the disc holds can be told: see [Tmdb.findShow]. A
+ * disc of episodes kept from an older lookup is looked up again once.
+ *
  * Kept in the app's cache, the poster beside what was found: Android may
  * empty it, and the disc is then looked up again. What matters of a disc -
  * where its playback stopped, its tracks - is in ResumeStore.
@@ -51,7 +59,7 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
     suspend fun find(disc: DiscInfo): FilmInfo? = withContext(Dispatchers.IO) {
         val language = language()
         val id = storeId(disc) + "-" + language
-        load(id, language)?.let { (film, posterUrl) ->
+        load(id, language, disc.episodes.size >= 2)?.let { (film, posterUrl) ->
             Log.d(LASER_TAG, "film $id: known, ${film?.title ?: "nothing found"}")
             if (film == null || film.poster != null || posterUrl == null ||
                 !settings.lookups.value.filmsOnline)
@@ -74,7 +82,8 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
             return@withContext null
         }
         val poster = match.posterUrl?.let { Http.download(it, File(dir.apply { mkdirs() }, "$id.jpg")) }
-        val film = FilmInfo(match.title, match.year, poster, language, match.originalLanguage)
+        val film = FilmInfo(match.title, match.year, poster, language, match.originalLanguage,
+                            match.series, match.episodes)
         save(id, film, match.posterUrl)
         film
     }
@@ -88,12 +97,14 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
      */
     private fun lookUp(disc: DiscInfo, language: String, key: String): TmdbMatch? {
         showOf(disc.title)?.let { (name, season) ->
-            return Tmdb.findShow(name, season, language, key).also {
+            return Tmdb.findShow(name, season, language, key, disc.episodes,
+                                 discNumberOf(disc.title)).also {
                 Log.d(LASER_TAG, "series \"$name\" season $season: ${it?.title ?: "no match"}")
             }
         }
 
         val queries = queriesOf(disc.title)
+        val discNumber = discNumberOf(disc.title)
         if (queries.isEmpty()) {
             Log.d(LASER_TAG, "film: no usable title in \"${disc.title}\"")
             return null
@@ -109,18 +120,23 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
                 /* A film whose name does not hold the query, words in order,
                  * gives way to a series named so: "Band of Brothers", a disc
                  * of its episodes, found "The Naked Brothers Band: Battle of
-                 * the Bands" of about an episode's length. */
-                if (!match.exactName) {
-                    val show = Tmdb.findShow(query, null, language, key)
-                    if (show?.exactName == true) {
+                 * the Bands" of about an episode's length. On a disc of
+                 * episodes, so does a film not named the query exactly, to
+                 * a series that is: "Frères d'Armes : l'héritage", of an
+                 * episode's length, for discs 2 and 5 of the same. */
+                val episodes = disc.episodes.size >= 2
+                if (!match.exactName || (episodes && !match.named)) {
+                    val show = Tmdb.findShow(query, null, language, key, disc.episodes, discNumber)
+                    if (show != null && (if (match.exactName) show.named else show.exactName)) {
                         Log.d(LASER_TAG, "series \"$query\": ${show.title}, named so rather than the film")
                         return show
                     }
+                    Log.d(LASER_TAG, "series \"$query\": ${show?.title ?: "no match"}, the film kept")
                 }
                 return match.copy(title = match.title + part?.let { " – $it" }.orEmpty())
             }
         }
-        return Tmdb.findShow(queries.first(), null, language, key).also {
+        return Tmdb.findShow(queries.first(), null, language, key, disc.episodes, discNumber).also {
             Log.d(LASER_TAG, "series \"${queries.first()}\": ${it?.title ?: "no match"}")
         }
     }
@@ -131,21 +147,31 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
      * its poster's address. */
     private data class Stored(val film: FilmInfo?, val posterUrl: String?)
 
-    /** null: never looked up. */
-    private fun load(id: String, language: String): Stored? {
+    /** null: never looked up - or, for a disc that may hold [episodes],
+     * looked up by an older version than LOOKUP_VERSION. */
+    private fun load(id: String, language: String, episodes: Boolean): Stored? {
         val file = File(dir, "$id.json")
         if (!file.isFile) return null
         return try {
             val o = JSONObject(file.readText())
-            if (o.optBoolean("none")) Stored(null, null)
+            if (episodes && o.optInt("lookup") < LOOKUP_VERSION) null
+            else if (o.optBoolean("none")) Stored(null, null)
             else Stored(FilmInfo(o.getString("title"),
                                  o.optString("year").ifEmpty { null },
                                  File(dir, "$id.jpg").takeIf { it.isFile }, language,
-                                 o.optString("original").ifEmpty { null }),
+                                 o.optString("original").ifEmpty { null },
+                                 o.optBoolean("series"),
+                                 episodesOf(o.optJSONArray("episodes"))),
                         o.optString("poster").ifEmpty { null })
         } catch (_: Exception) {
             null
         }
+    }
+
+    private fun episodesOf(array: JSONArray?): Map<Int, EpisodeName> {
+        array ?: return emptyMap()
+        return (0 until array.length()).mapNotNull { array.optJSONObject(it) }
+            .associate { it.getInt("title") to EpisodeName(it.getInt("number"), it.optString("name")) }
     }
 
     private fun save(id: String, film: FilmInfo?, posterUrl: String? = null) {
@@ -153,6 +179,15 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
                 else JSONObject().put("title", film.title).put("year", film.year ?: "")
                     .put("original", film.originalLanguage ?: "")
                     .put("poster", posterUrl ?: "")
+                    .put("series", film.series)
+        /* The episodes were looked for, as this version looks: see
+         * LOOKUP_VERSION. */
+        o.put("lookup", LOOKUP_VERSION)
+        o.put("episodes", JSONArray().apply {
+            film?.episodes?.forEach { (title, e) ->
+                put(JSONObject().put("title", title).put("number", e.number).put("name", e.name))
+            }
+        })
         try {
             /* The cache may have been emptied since the folder was made. */
             dir.mkdirs()
@@ -169,6 +204,11 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
     fun language(): String = interfaceLocale().toLanguageTag()
 
     companion object {
+        /* What a disc of episodes was looked up by, saved with it: a disc
+         * looked up by an older version is looked up again. 2: a series
+         * named exactly is preferred to a film that is not. */
+        private const val LOOKUP_VERSION = 2
+
         /* Words a volume label adds to the film's name. A marker may be
          * followed by a number, dropped with it: D1, DISC_2, R2, DVD9. */
         private val MARKERS = setOf("D", "DISC", "DISK", "CD", "DVD", "BD", "R", "REGION")
@@ -231,6 +271,13 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
         fun discPartOf(title: String): String? =
             DISC_PART.find(title)?.let { titleCase(it.groupValues[1]) + " " + it.groupValues[2] }
 
+        /* A disc's number in a title: "D2", "DISC 3", "S01D2". */
+        private val DISC_NUMBER = Regex("""(?i)(?:^|[\s_.\-]|S\d{1,2})(?:D|DISC|DISK)[\s_.\-]*(\d{1,2})(?=$|[\s_.\-])""")
+
+        /** The disc's number in its set, as its title gives it, or null. */
+        fun discNumberOf(title: String): Int? =
+            DISC_NUMBER.find(title)?.groupValues?.get(1)?.toIntOrNull()?.takeIf { it >= 1 }
+
         /** The series and season a title names, or null. */
         fun showOf(title: String): Pair<String, Int>? {
             val match = SEASON.find(title) ?: return null
@@ -285,9 +332,13 @@ class FilmLookup(context: Context, private val settings: AppSettings) {
 /** What TMDB answered for a disc. [exactName]: its name, or its original
  * name, holds the query's words in order - "Fellowship of the Ring" in "The
  * Lord of the Rings: The Fellowship of the Ring", not "Band of Brothers" in
- * "The Naked Brothers Band: Battle of the Bands". */
+ * "The Naked Brothers Band: Battle of the Bands". [named]: one of them is
+ * the query's words and no others - "Band of Brothers", not "Band of
+ * Brothers: The Legacy". */
 data class TmdbMatch(val title: String, val year: String?, val posterUrl: String?,
-                     val originalLanguage: String? = null, val exactName: Boolean = true)
+                     val originalLanguage: String? = null, val exactName: Boolean = true,
+                     val series: Boolean = false, val episodes: Map<Int, EpisodeName> = emptyMap(),
+                     val named: Boolean = false)
 
 /**
  * TMDB's search, then each candidate's running time against the disc's.
@@ -378,6 +429,8 @@ object Tmdb {
             originalLanguage = chosen.optString("original_language").ifEmpty { null },
             exactName = phrase(chosen.optString("title"), query) ||
                 phrase(chosen.optString("original_title"), query),
+            named = named(chosen.optString("title"), query) ||
+                named(chosen.optString("original_title"), query),
         )
     }
 
@@ -385,11 +438,14 @@ object Tmdb {
      * The series [query] names: TMDB's first answer, if its name holds all
      * the query's words - a box set has no length to check it against. With
      * a [season], named and illustrated by that season when TMDB has it:
-     * "Friends – Saison 1".
+     * "Friends – Saison 1"; and the disc's [episodes] named after that
+     * season's, when it can be told which they are: see [alignEpisodes].
+     * [discNumber]: the disc's in the season's set, from its title.
      *
      * @throws Exception if TMDB cannot be reached
      */
-    fun findShow(query: String, season: Int?, language: String, key: String): TmdbMatch? {
+    fun findShow(query: String, season: Int?, language: String, key: String,
+                 episodes: List<EpisodeInfo> = emptyList(), discNumber: Int? = null): TmdbMatch? {
         val search = JSONObject(get("$API/search/tv?query=${enc(query)}" +
                                     "&language=$language&include_adult=false", key))
         val show = search.optJSONArray("results")?.optJSONObject(0)
@@ -399,6 +455,7 @@ object Tmdb {
         var title = name
         var year = show.optString("first_air_date").take(4).ifEmpty { null }
         var poster = show.optString("poster_path").takeIf { it.startsWith("/") }
+        var episodeNames = emptyMap<Int, EpisodeName>()
 
         if (season != null) {
             /* A season TMDB does not know: the series alone. */
@@ -409,12 +466,98 @@ object Tmdb {
                 title = "$name – " + details.optString("name").ifEmpty { "Season $season" }
                 details.optString("air_date").take(4).takeIf { it.isNotEmpty() }?.let { year = it }
                 details.optString("poster_path").takeIf { it.startsWith("/") }?.let { poster = it }
+                if (episodes.size >= 2) episodeNames = nameEpisodes(episodes, details, discNumber)
             }
+        } else if (episodes.size >= 2) {
+            /* No season in the disc's title: a series of one season - a
+             * miniseries, "BAND_OF_BROTHERS_DISC1" - has its episodes named
+             * after it all the same. */
+            runCatching { onlySeason(show.getInt("id"), language, key) }.getOrNull()
+                ?.let { episodeNames = nameEpisodes(episodes, it, discNumber) }
         }
         return TmdbMatch(title, year, poster?.let { IMAGES + it },
                          show.optString("original_language").ifEmpty { null },
                          phrase(show.optString("name"), query) ||
-                             phrase(show.optString("original_name"), query))
+                             phrase(show.optString("original_name"), query),
+                         series = true, episodes = episodeNames,
+                         named = named(show.optString("name"), query) ||
+                             named(show.optString("original_name"), query))
+    }
+
+    /** The season of series [id], specials aside, if it has only one;
+     * null otherwise. */
+    private fun onlySeason(id: Int, language: String, key: String): JSONObject? {
+        val seasons = JSONObject(get("$API/tv/$id?language=$language", key)).optJSONArray("seasons")
+            ?: return null
+        val numbers = (0 until seasons.length()).mapNotNull { seasons.optJSONObject(it) }
+            .map { it.optInt("season_number") }.filter { it >= 1 }
+        val only = numbers.singleOrNull() ?: return null
+        return JSONObject(get("$API/tv/$id/season/$only?language=$language", key))
+    }
+
+    /* An episode's length against TMDB's runtime: this close, or this share
+     * of it - its credits, a recap before it. */
+    private const val EPISODE_GAP_MS = 4 * 60_000L
+    private const val EPISODE_GAP_PERCENT = 15
+    /* Of placements that fit, the closest is taken if it is closer than the
+     * next by this much, on average. */
+    private const val EPISODE_BETTER_MS = 2 * 60_000L
+
+    /** The disc's [episodes], by title, named after those of the season
+     * [details] gives; none if it cannot be told which they are. */
+    private fun nameEpisodes(episodes: List<EpisodeInfo>, details: JSONObject,
+                             discNumber: Int?): Map<Int, EpisodeName> {
+        val list = details.optJSONArray("episodes") ?: return emptyMap()
+        val season = (0 until list.length()).mapNotNull { list.optJSONObject(it) }
+            .filter { it.optInt("episode_number") > 0 }
+        val start = alignEpisodes(episodes.map { it.lengthMs },
+                                  season.map { it.optLong("runtime") * 60_000 }, discNumber)
+        Log.d(LASER_TAG, "episodes: ${episodes.size} on the disc, ${season.size} in the season, " +
+                         "from ${start?.let { season[it].optInt("episode_number") } ?: "unknown"}")
+        start ?: return emptyMap()
+        return episodes.withIndex().associate { (i, e) ->
+            val s = season[start + i]
+            e.title to EpisodeName(s.optInt("episode_number"), s.optString("name"))
+        }
+    }
+
+    /**
+     * Where the disc's episodes, of [lengthsMs], start among the season's,
+     * of [runtimesMs] - 0 when TMDB does not say: a placement where each
+     * episode TMDB times is within EPISODE_GAP_MS or EPISODE_GAP_PERCENT of
+     * its runtime, sped up or not (PAL). Of several, the one the disc's
+     * number gives - as many episodes on each disc before it - else the
+     * clearly closest, else none: a doubtful naming is no naming.
+     */
+    fun alignEpisodes(lengthsMs: List<Long>, runtimesMs: List<Long>, discNumber: Int?): Int? {
+        val count = lengthsMs.size
+        if (count == 0 || runtimesMs.size < count) return null
+        /* The placements that fit: where, how many episodes timed, their
+         * average gap. */
+        val fits = (0..runtimesMs.size - count).mapNotNull { start ->
+            var timed = 0
+            var gaps = 0L
+            for (i in 0 until count) {
+                val runtime = runtimesMs[start + i]
+                if (runtime <= 0) continue
+                val gap = minOf(abs(runtime - lengthsMs[i]), abs(runtime * 24 / 25 - lengthsMs[i]))
+                if (gap > max(EPISODE_GAP_MS, runtime * EPISODE_GAP_PERCENT / 100)) return@mapNotNull null
+                timed++
+                gaps += gap
+            }
+            Triple(start, timed, if (timed > 0) gaps / timed else 0L)
+        }
+        if (fits.size == 1) return fits[0].first
+        if (discNumber != null) {
+            val start = (discNumber - 1) * count
+            if (fits.any { it.first == start }) return start
+        }
+        /* Every placement timed, the closest clearly so. */
+        if (fits.size >= 2 && fits.all { it.second > 0 }) {
+            val sorted = fits.sortedBy { it.third }
+            if (sorted[1].third - sorted[0].third >= EPISODE_BETTER_MS) return sorted[0].first
+        }
+        return null
     }
 
     /** [title] has every word of [query], case and accents aside. */

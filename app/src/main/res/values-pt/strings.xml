@@ -61,6 +61,11 @@
     <string name="version">Versão</string>
     <string name="version_short">Versão curta</string>
     <string name="version_long">Versão longa</string>
+    <string name="episode">Episódio</string>
+    <!-- An episode without its name: its number in its season, or on the disc. -->
+    <string name="episode_number">Episódio %1$d</string>
+    <!-- An episode: its number in its season, then its name. -->
+    <string name="episode_named">%1$d. %2$s</string>
     <string name="track_n">Faixa %1$d</string>
     <string name="track_numbered">%1$s (faixa %2$d)</string>
     <string name="channels_mono">mono</string>
