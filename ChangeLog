@@ -2,6 +2,9 @@
     - Show warnings for DVD region-mismatch or protection
     - Show what movie playback is waiting for before its first picture
     - Run BD-J menus in the app's ART, without a bundled JRE (app size halved)
+    - New option to limit the spped of the drive
+    - Reworked options to disable hardware acceleration per codec instead of per disc type
+    - Added the possibility to select a TV show episode from the main screen
     - Update liblaser to version 0.3.2
 
 2026-11-05: Version 0.1.0

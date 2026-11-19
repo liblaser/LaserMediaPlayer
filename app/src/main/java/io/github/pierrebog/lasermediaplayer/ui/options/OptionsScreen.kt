@@ -352,6 +352,8 @@ private fun PlaybackPage(settings: AppSettings, metrics: OptionsMetrics, open: (
                 settings.updatePlayback { it.copy(hwH264 = on) } } },
             { SwitchRow("VC-1", playback.hwVc1, metrics, detail = "Blu-ray") { on ->
                 settings.updatePlayback { it.copy(hwVc1 = on) } } },
+            { SwitchRow("H.265 / HEVC", playback.hwHevc, metrics, detail = "UHD Blu-ray") { on ->
+                settings.updatePlayback { it.copy(hwHevc = on) } } },
         )
     }
     /* The arrow pad shows on touch screens only: nothing to change on a TV. */

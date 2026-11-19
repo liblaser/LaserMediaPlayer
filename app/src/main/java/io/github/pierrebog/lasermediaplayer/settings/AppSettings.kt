@@ -52,6 +52,8 @@ data class PlaybackDefaults(
     /** Of H.264, and of VC-1: Blu-ray. */
     val hwH264: Boolean = true,
     val hwVc1: Boolean = true,
+    /** Of H.265 (HEVC): UHD Blu-ray. */
+    val hwHevc: Boolean = true,
     /** The arrow pad over a DVD's or a Blu-ray's menu, on a touch screen. */
     val menuArrows: Boolean = true,
     /** The drive reads no faster than playback needs, with some margin: a
@@ -62,7 +64,7 @@ data class PlaybackDefaults(
      * names them; empty when hardware decodes all of them. */
     val softwareCodecs: List<String>
         get() = listOfNotNull("mpeg2".takeIf { !hwMpeg }, "h264".takeIf { !hwH264 },
-                              "vc1".takeIf { !hwVc1 })
+                              "vc1".takeIf { !hwVc1 }, "hevc".takeIf { !hwHevc })
 }
 
 object TrackPref {
@@ -142,6 +144,7 @@ class AppSettings(context: Context) {
             putBoolean(KEY_HW_MPEG, p.hwMpeg)
             putBoolean(KEY_HW_H264, p.hwH264)
             putBoolean(KEY_HW_VC1, p.hwVc1)
+            putBoolean(KEY_HW_HEVC, p.hwHevc)
             putBoolean(KEY_MENU_ARROWS, p.menuArrows)
             putBoolean(KEY_LIMIT_SPEED, p.limitSpeed)
         }
@@ -161,6 +164,7 @@ class AppSettings(context: Context) {
                                           prefs.getBoolean(OLD_KEY_HW_DVD, d.hwMpeg)),
             hwH264 = prefs.getBoolean(KEY_HW_H264, prefs.getBoolean(OLD_KEY_HW_BLURAY, d.hwH264)),
             hwVc1 = prefs.getBoolean(KEY_HW_VC1, prefs.getBoolean(OLD_KEY_HW_BLURAY, d.hwVc1)),
+            hwHevc = prefs.getBoolean(KEY_HW_HEVC, d.hwHevc),
             menuArrows = prefs.getBoolean(KEY_MENU_ARROWS, d.menuArrows),
             limitSpeed = prefs.getBoolean(KEY_LIMIT_SPEED, d.limitSpeed),
         )
@@ -232,6 +236,7 @@ class AppSettings(context: Context) {
         const val KEY_HW_MPEG = "hw_mpeg"
         const val KEY_HW_H264 = "hw_h264"
         const val KEY_HW_VC1 = "hw_vc1"
+        const val KEY_HW_HEVC = "hw_hevc"
         /* The switches per kind of disc, read until the new ones are set. */
         const val OLD_KEY_HW_VCD = "hw_vcd"
         const val OLD_KEY_HW_DVD = "hw_dvd"
