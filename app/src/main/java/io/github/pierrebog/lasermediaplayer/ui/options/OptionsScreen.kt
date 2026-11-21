@@ -58,7 +58,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.pierrebog.lasermediaplayer.BuildConfig
 import io.github.pierrebog.lasermediaplayer.R
 import io.github.pierrebog.lasermediaplayer.settings.AppLanguage
 import io.github.pierrebog.lasermediaplayer.settings.AppSettings
@@ -136,13 +135,6 @@ fun OptionsScreen(settings: AppSettings, onBack: () -> Unit) {
         AboutPageScreen(shown, metrics, onBack = { page = null })
         return
     }
-    /* Debug builds: the sector test, over the options too. */
-    var sectorTest by rememberSaveable { mutableStateOf(false) }
-    if (sectorTest) {
-        SectorTestScreen(metrics, onBack = { sectorTest = false })
-        return
-    }
-    val openSectorTest = { sectorTest = true }
 
     Box(Modifier.fillMaxSize().background(LaserColors.Background)) {
         Column(
@@ -166,7 +158,7 @@ fun OptionsScreen(settings: AppSettings, onBack: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
                     InterfacePage(settings, metrics, open)
-                    PlaybackPage(settings, metrics, open, openSectorTest)
+                    PlaybackPage(settings, metrics, open)
                     CoversPage(settings, metrics, open)
                     AboutTab(metrics, onOpen = { page = it })
                 }
@@ -193,8 +185,7 @@ fun OptionsScreen(settings: AppSettings, onBack: () -> Unit) {
                         CompositionLocalProvider(LocalTabs provides true) {
                             when (tab) {
                                 OptionsTab.INTERFACE -> InterfacePage(settings, metrics, open)
-                                OptionsTab.PLAYBACK -> PlaybackPage(settings, metrics, open,
-                                                                    openSectorTest)
+                                OptionsTab.PLAYBACK -> PlaybackPage(settings, metrics, open)
                                 OptionsTab.COVERS -> CoversPage(settings, metrics, open)
                                 OptionsTab.ABOUT -> AboutTab(metrics, onOpen = { page = it })
                             }
@@ -327,11 +318,9 @@ private fun InterfacePage(settings: AppSettings, metrics: OptionsMetrics, open: 
 }
 
 /** Default tracks, the drive's speed, hardware decoding per video codec,
- * the video screen, and the Blu-ray's key file; in debug builds, the sector
- * test. */
+ * the video screen, and the Blu-ray's key file. */
 @Composable
-private fun PlaybackPage(settings: AppSettings, metrics: OptionsMetrics, open: (Picker) -> Unit,
-                         onSectorTest: () -> Unit) {
+private fun PlaybackPage(settings: AppSettings, metrics: OptionsMetrics, open: (Picker) -> Unit) {
     val playback by settings.playback.collectAsStateWithLifecycle()
     val tabs = LocalTabs.current
     Section(stringResource(if (tabs) R.string.options_tracks else R.string.options_playback_tracks),
@@ -381,14 +370,6 @@ private fun PlaybackPage(settings: AppSettings, metrics: OptionsMetrics, open: (
         if (metrics.big) Rows(clock) else Rows(clock, arrows)
     }
     BlurayKeysSection(metrics)
-    if (BuildConfig.DEBUG)
-        Section("Debug", metrics) {
-            Rows(
-                { ValueRow("Sector read test", "", metrics,
-                           detail = "Reads a range of sectors, as dd does",
-                           onClick = onSectorTest) },
-            )
-        }
 }
 
 /**
