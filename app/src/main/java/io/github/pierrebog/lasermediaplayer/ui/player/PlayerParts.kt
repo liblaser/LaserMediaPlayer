@@ -2,6 +2,7 @@ package io.github.pierrebog.lasermediaplayer.ui.player
 
 import android.annotation.SuppressLint
 import android.provider.Settings
+import android.text.format.DateFormat
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.RepeatMode
@@ -37,8 +38,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -53,6 +56,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -61,6 +65,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -72,20 +77,24 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.github.pierrebog.lasermediaplayer.R
 import io.github.pierrebog.lasermediaplayer.ui.rememberCover
 import io.github.pierrebog.lasermediaplayer.ui.theme.LaserColors
 import io.github.pierrebog.lasermediaplayer.ui.theme.LaserType
+import kotlinx.coroutines.delay
 import java.io.File
+import java.util.Date
 
 /* Pieces shared by the audio and video players - "Lecture audio" and
  * "Lecture vidéo" in the C′ mockups. */
 
-/** Back button, the app's name and, on a TV, the drive. */
+/** Back button, the app's name and, on a TV, the drive; at the right, the
+ * time of day ([clock], the video screen in portrait). */
 @Composable
 fun PlayerHeader(onBack: () -> Unit, driveLabel: String?, tv: Boolean,
-                 modifier: Modifier = Modifier) {
-    Row(modifier.height(if (tv) 56.dp else 44.dp),
+                 modifier: Modifier = Modifier, clock: Boolean = false) {
+    Row(modifier.height(if (tv) 56.dp else 44.dp).then(if (clock) Modifier.fillMaxWidth() else Modifier),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(if (tv) 24.dp else 12.dp)) {
         CircleButton(R.drawable.ic_chevron_left, stringResource(R.string.back),
@@ -95,8 +104,38 @@ fun PlayerHeader(onBack: () -> Unit, driveLabel: String?, tv: Boolean,
         if (tv && driveLabel != null)
             Text(driveLabel, style = LaserType.Small.copy(fontSize = LaserType.Small.fontSize * 1.3f),
                  maxLines = 1)
+        if (clock)
+            Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) { Clock(18.sp) }
     }
 }
+
+/**
+ * The time of day, as the device writes it - 12 or 24 hours, as set in its
+ * options - changing on the minute. [shadow]: over the picture, which may be
+ * as light as the text.
+ */
+@Composable
+fun Clock(size: TextUnit, modifier: Modifier = Modifier, shadow: Boolean = false) {
+    val context = LocalContext.current
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            now = System.currentTimeMillis()
+            /* To the next minute: every time zone is whole minutes off UTC. */
+            delay(MINUTE_MS - now % MINUTE_MS)
+        }
+    }
+    val text = DateFormat.getTimeFormat(context).format(Date(now))
+    val glow = with(LocalDensity.current) {
+        Shadow(Color.Black.copy(alpha = 0.5f), Offset(0f, 1.dp.toPx()), blurRadius = 6.dp.toPx())
+    }
+    Text(text, modifier = modifier, maxLines = 1,
+         style = LaserType.Body.copy(fontSize = size, color = LaserColors.Text,
+                                     fontFeatureSettings = "tnum",
+                                     shadow = if (shadow) glow else null))
+}
+
+private const val MINUTE_MS = 60_000L
 
 /** A skip button of [Transport]: faded, doing nothing, unless [enabled]. */
 class Skip(val description: String, val enabled: Boolean, val onClick: () -> Unit)

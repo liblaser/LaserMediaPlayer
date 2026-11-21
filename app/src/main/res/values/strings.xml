@@ -153,8 +153,9 @@
     <string name="options_playback_drive">Playback — drive</string>
     <string name="options_limit_speed">Limit the drive\'s speed</string>
     <string name="options_limit_speed_detail">Can reduce noise and the power the drive needs; loading may be slower</string>
-    <string name="options_other">Other options</string>
-    <string name="options_playback_other">Playback — other options</string>
+    <string name="options_other">Player screen</string>
+    <string name="options_playback_other">Playback — player screen</string>
+    <string name="options_clock">Show the time on the video playback screen</string>
     <string name="options_menu_arrows">Show navigation arrows in DVD and Blu-ray menus</string>
     <string name="options_playback_bluray">Playback — Blu-ray</string>
     <string name="options_hw_hint">Turn off if the picture stutters or shows defects with this video format.</string>

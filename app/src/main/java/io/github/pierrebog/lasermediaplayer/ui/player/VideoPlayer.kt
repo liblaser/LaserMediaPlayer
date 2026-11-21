@@ -93,7 +93,8 @@ import org.videolan.libvlc.util.VLCVideoLayout
  * mockups.
  *
  * TV and landscape: the picture full screen, the controls over it - title and
- * chapter on top; seek bar with the chapters, transport, and the fill,
+ * chapter on top, and the time of day at the right (an option); seek bar
+ * with the chapters, transport, and the fill,
  * audio, subtitle and disc menu buttons at the bottom - hidden after a few
  * seconds of playback. Portrait: the picture in a band at the top, the
  * controls below, always shown.
@@ -377,11 +378,15 @@ private fun BoxScope.Overlay(
             .then(if (tv) Modifier else Modifier.safeDrawingPadding())
             .padding(horizontal = if (tv) 72.dp else 24.dp, vertical = if (tv) 40.dp else 16.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically,
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(if (tv) 24.dp else 14.dp)) {
             CircleButton(R.drawable.ic_chevron_left, stringResource(R.string.back),
                          if (tv) 56.dp else 44.dp, onClick = onBack, translucent = true)
-            Titles(request, ui, if (tv) 40.sp else 24.sp, if (tv) 19.sp else 13.sp)
+            /* A long title gives way to the clock. */
+            Box(Modifier.weight(1f)) {
+                Titles(request, ui, if (tv) 40.sp else 24.sp, if (tv) 19.sp else 13.sp)
+            }
+            if (controller.clock) Clock(if (tv) 30.sp else 20.sp, shadow = true)
         }
         Spacer(Modifier.weight(1f))
         Column(verticalArrangement = Arrangement.spacedBy(if (tv) 24.dp else 14.dp)) {
@@ -421,7 +426,9 @@ private fun Portrait(
         Modifier.fillMaxSize().safeDrawingPadding().padding(top = 12.dp, bottom = 28.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        PlayerHeader(onBack, driveLabel, tv = false, modifier = margins)
+        /* No time of day in a disc's menu either: the controls are gone. */
+        PlayerHeader(onBack, driveLabel, tv = false, modifier = margins,
+                     clock = controller.clock && !ui.inMenu)
         /* The picture's slot: empty, the view is placed over it. */
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).onGloballyPositioned(onBand))
         Box(margins) { Titles(request, ui, 30.sp, 15.sp) }

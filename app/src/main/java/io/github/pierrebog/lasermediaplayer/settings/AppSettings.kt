@@ -35,7 +35,8 @@ enum class AppLanguage(val tag: String, val nativeName: String) {
 
 /**
  * The tracks a disc starts with when nothing is remembered for it, the
- * hardware decoding of each video codec, and the drive's speed.
+ * hardware decoding of each video codec, the drive's speed, and what the
+ * video screen shows.
  *
  * @param audio [TrackPref.ORIGINAL], [TrackPref.INTERFACE] or an ISO 639-1 code
  * @param subtitles [TrackPref.NONE], [TrackPref.INTERFACE] or an ISO 639-1 code
@@ -56,6 +57,8 @@ data class PlaybackDefaults(
     val hwHevc: Boolean = true,
     /** The arrow pad over a DVD's or a Blu-ray's menu, on a touch screen. */
     val menuArrows: Boolean = true,
+    /** The time of day on the video screen, with its controls. */
+    val clock: Boolean = true,
     /** The drive reads no faster than playback needs, with some margin: a
      * quieter drive, drawing less power. */
     val limitSpeed: Boolean = false,
@@ -146,6 +149,7 @@ class AppSettings(context: Context) {
             putBoolean(KEY_HW_VC1, p.hwVc1)
             putBoolean(KEY_HW_HEVC, p.hwHevc)
             putBoolean(KEY_MENU_ARROWS, p.menuArrows)
+            putBoolean(KEY_CLOCK, p.clock)
             putBoolean(KEY_LIMIT_SPEED, p.limitSpeed)
         }
     }
@@ -166,6 +170,7 @@ class AppSettings(context: Context) {
             hwVc1 = prefs.getBoolean(KEY_HW_VC1, prefs.getBoolean(OLD_KEY_HW_BLURAY, d.hwVc1)),
             hwHevc = prefs.getBoolean(KEY_HW_HEVC, d.hwHevc),
             menuArrows = prefs.getBoolean(KEY_MENU_ARROWS, d.menuArrows),
+            clock = prefs.getBoolean(KEY_CLOCK, d.clock),
             limitSpeed = prefs.getBoolean(KEY_LIMIT_SPEED, d.limitSpeed),
         )
     }
@@ -242,6 +247,7 @@ class AppSettings(context: Context) {
         const val OLD_KEY_HW_DVD = "hw_dvd"
         const val OLD_KEY_HW_BLURAY = "hw_bluray"
         const val KEY_MENU_ARROWS = "menu_arrows"
+        const val KEY_CLOCK = "player_clock"
         const val KEY_LIMIT_SPEED = "limit_speed"
         const val KEY_ALBUMS = "lookup_albums"
         const val KEY_FILMS = "lookup_films"

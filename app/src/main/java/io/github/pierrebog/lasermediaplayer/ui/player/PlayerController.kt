@@ -118,6 +118,9 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
     /** The arrow pad over a disc menu, from the options. */
     val menuArrows: Boolean get() = app.settings.playback.value.menuArrows
 
+    /** The time of day with the controls, from the options. */
+    val clock: Boolean get() = app.settings.playback.value.clock
+
     private val player = MediaPlayer(app.engine.libVlc)
     private val main = Handler(Looper.getMainLooper())
     private val deviceName = request.disc.deviceName

@@ -146,9 +146,10 @@
     <string name="options_playback_drive">Lecture — lecteur</string>
     <string name="options_limit_speed">Limiter la vitesse du lecteur</string>
     <string name="options_limit_speed_detail">Peut réduire le bruit et la puissance électrique nécessaire ; les chargements peuvent être plus lents</string>
-    <string name="options_other">Autres options</string>
-    <string name="options_playback_other">Lecture — autres options</string>
-    <string name="options_menu_arrows">Afficher les flèches de navigation dans les menus des DVDs et Blu-rays</string>
+    <string name="options_other">Écran de lecture</string>
+    <string name="options_playback_other">Lecture — écran de lecture</string>
+    <string name="options_clock">Afficher l\'heure dans l\'écran de lecture vidéo</string>
+    <string name="options_menu_arrows">Afficher les flèches de navigation dans les menus des DVD et Blu-ray</string>
     <string name="options_playback_bluray">Lecture — Blu-ray</string>
     <string name="options_hw_hint">À désactiver si l\'image saccade ou présente des défauts avec ce format vidéo.</string>
     <string name="options_hw_mpeg_detail">VCD, SVCD, DVD, menus Blu-ray</string>

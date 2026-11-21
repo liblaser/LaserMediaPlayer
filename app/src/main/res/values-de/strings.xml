@@ -150,8 +150,9 @@
     <string name="options_playback_drive">Wiedergabe — Laufwerk</string>
     <string name="options_limit_speed">Laufwerksgeschwindigkeit begrenzen</string>
     <string name="options_limit_speed_detail">Kann Geräusche und den Strombedarf verringern; das Laden kann länger dauern</string>
-    <string name="options_other">Weitere Optionen</string>
-    <string name="options_playback_other">Wiedergabe — weitere Optionen</string>
+    <string name="options_other">Wiedergabebildschirm</string>
+    <string name="options_playback_other">Wiedergabe — Wiedergabebildschirm</string>
+    <string name="options_clock">Uhrzeit im Videowiedergabebildschirm anzeigen</string>
     <string name="options_menu_arrows">Navigationspfeile in DVD- und Blu-ray-Menüs anzeigen</string>
     <string name="options_playback_bluray">Wiedergabe — Blu-ray</string>
     <string name="options_hw_hint">Deaktivieren, wenn das Bild bei diesem Videoformat ruckelt oder Fehler zeigt.</string>

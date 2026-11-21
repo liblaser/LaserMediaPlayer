@@ -152,8 +152,9 @@
     <string name="options_playback_drive">Reprodução — unidade</string>
     <string name="options_limit_speed">Limitar a velocidade da unidade</string>
     <string name="options_limit_speed_detail">Pode reduzir o ruído e a potência elétrica necessária; os carregamentos podem ser mais lentos</string>
-    <string name="options_other">Outras opções</string>
-    <string name="options_playback_other">Reprodução — outras opções</string>
+    <string name="options_other">Tela de reprodução</string>
+    <string name="options_playback_other">Reprodução — tela de reprodução</string>
+    <string name="options_clock">Mostrar a hora na tela de reprodução de vídeo</string>
     <string name="options_menu_arrows">Mostrar setas de navegação nos menus de DVD e Blu-ray</string>
     <string name="options_playback_bluray">Reprodução — Blu-ray</string>
     <string name="options_hw_hint">Desative se a imagem travar ou apresentar defeitos com este formato de vídeo.</string>

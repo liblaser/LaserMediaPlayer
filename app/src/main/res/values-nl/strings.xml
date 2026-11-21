@@ -150,8 +150,9 @@
     <string name="options_playback_drive">Afspelen — station</string>
     <string name="options_limit_speed">Snelheid van het station beperken</string>
     <string name="options_limit_speed_detail">Kan geluid en het benodigde vermogen verminderen; laden kan langer duren</string>
-    <string name="options_other">Overige opties</string>
-    <string name="options_playback_other">Afspelen — overige opties</string>
+    <string name="options_other">Afspeelscherm</string>
+    <string name="options_playback_other">Afspelen — afspeelscherm</string>
+    <string name="options_clock">Tijd tonen in het videoweergavescherm</string>
     <string name="options_menu_arrows">Navigatiepijlen tonen in dvd- en Blu-ray-menu\'s</string>
     <string name="options_playback_bluray">Afspelen — Blu-ray</string>
     <string name="options_hw_hint">Uitschakelen als het beeld hapert of fouten vertoont met dit videoformaat.</string>

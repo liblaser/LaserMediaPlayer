@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.pierrebog.lasermediaplayer.BuildConfig
 import io.github.pierrebog.lasermediaplayer.R
 import io.github.pierrebog.lasermediaplayer.settings.AppLanguage
 import io.github.pierrebog.lasermediaplayer.settings.AppSettings
@@ -135,6 +136,13 @@ fun OptionsScreen(settings: AppSettings, onBack: () -> Unit) {
         AboutPageScreen(shown, metrics, onBack = { page = null })
         return
     }
+    /* Debug builds: the sector test, over the options too. */
+    var sectorTest by rememberSaveable { mutableStateOf(false) }
+    if (sectorTest) {
+        SectorTestScreen(metrics, onBack = { sectorTest = false })
+        return
+    }
+    val openSectorTest = { sectorTest = true }
 
     Box(Modifier.fillMaxSize().background(LaserColors.Background)) {
         Column(
@@ -158,7 +166,7 @@ fun OptionsScreen(settings: AppSettings, onBack: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
                     InterfacePage(settings, metrics, open)
-                    PlaybackPage(settings, metrics, open)
+                    PlaybackPage(settings, metrics, open, openSectorTest)
                     CoversPage(settings, metrics, open)
                     AboutTab(metrics, onOpen = { page = it })
                 }
@@ -185,7 +193,8 @@ fun OptionsScreen(settings: AppSettings, onBack: () -> Unit) {
                         CompositionLocalProvider(LocalTabs provides true) {
                             when (tab) {
                                 OptionsTab.INTERFACE -> InterfacePage(settings, metrics, open)
-                                OptionsTab.PLAYBACK -> PlaybackPage(settings, metrics, open)
+                                OptionsTab.PLAYBACK -> PlaybackPage(settings, metrics, open,
+                                                                    openSectorTest)
                                 OptionsTab.COVERS -> CoversPage(settings, metrics, open)
                                 OptionsTab.ABOUT -> AboutTab(metrics, onOpen = { page = it })
                             }
@@ -318,9 +327,11 @@ private fun InterfacePage(settings: AppSettings, metrics: OptionsMetrics, open: 
 }
 
 /** Default tracks, the drive's speed, hardware decoding per video codec,
- * the other options, and the Blu-ray's key file. */
+ * the video screen, and the Blu-ray's key file; in debug builds, the sector
+ * test. */
 @Composable
-private fun PlaybackPage(settings: AppSettings, metrics: OptionsMetrics, open: (Picker) -> Unit) {
+private fun PlaybackPage(settings: AppSettings, metrics: OptionsMetrics, open: (Picker) -> Unit,
+                         onSectorTest: () -> Unit) {
     val playback by settings.playback.collectAsStateWithLifecycle()
     val tabs = LocalTabs.current
     Section(stringResource(if (tabs) R.string.options_tracks else R.string.options_playback_tracks),
@@ -356,16 +367,28 @@ private fun PlaybackPage(settings: AppSettings, metrics: OptionsMetrics, open: (
                 settings.updatePlayback { it.copy(hwHevc = on) } } },
         )
     }
-    /* The arrow pad shows on touch screens only: nothing to change on a TV. */
-    if (!metrics.big)
-        Section(stringResource(if (tabs) R.string.options_other else R.string.options_playback_other),
-                metrics) {
+    val clock: @Composable () -> Unit = {
+        SwitchRow(stringResource(R.string.options_clock), playback.clock,
+                  metrics) { on -> settings.updatePlayback { it.copy(clock = on) } }
+    }
+    val arrows: @Composable () -> Unit = {
+        SwitchRow(stringResource(R.string.options_menu_arrows), playback.menuArrows,
+                  metrics) { on -> settings.updatePlayback { it.copy(menuArrows = on) } }
+    }
+    Section(stringResource(if (tabs) R.string.options_other else R.string.options_playback_other),
+            metrics) {
+        /* The arrow pad shows on touch screens only: nothing to change on a TV. */
+        if (metrics.big) Rows(clock) else Rows(clock, arrows)
+    }
+    BlurayKeysSection(metrics)
+    if (BuildConfig.DEBUG)
+        Section("Debug", metrics) {
             Rows(
-                { SwitchRow(stringResource(R.string.options_menu_arrows), playback.menuArrows,
-                            metrics) { on -> settings.updatePlayback { it.copy(menuArrows = on) } } },
+                { ValueRow("Sector read test", "", metrics,
+                           detail = "Reads a range of sectors, as dd does",
+                           onClick = onSectorTest) },
             )
         }
-    BlurayKeysSection(metrics)
 }
 
 /**

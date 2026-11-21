@@ -80,6 +80,14 @@ object LaserDrive {
     /** Opens the tray; it must be unlocked. */
     fun eject(fd: Int): Boolean = nativeEject(fd) == 0
 
+    /**
+     * Debug builds' sector test: one READ(10) of [count] blocks at [lba],
+     * straight to the drive - not chunked, nothing recorded, the blocks known
+     * not to read asked for all the same. The bytes read, or a negative
+     * laser_status_t. [fd] must be claimed.
+     */
+    fun readRaw(fd: Int, lba: Int, count: Int): Int = nativeReadRaw(fd, lba, count)
+
     /* laser.h's laser_status_t. */
     private const val LASER_ERR_NOT_OPTICAL = -11
 
@@ -89,4 +97,5 @@ object LaserDrive {
     @JvmStatic private external fun nativeUnreadable(fd: Int): Int
     @JvmStatic private external fun nativeLock(fd: Int, locked: Boolean): Int
     @JvmStatic private external fun nativeEject(fd: Int): Int
+    @JvmStatic private external fun nativeReadRaw(fd: Int, lba: Int, count: Int): Int
 }
