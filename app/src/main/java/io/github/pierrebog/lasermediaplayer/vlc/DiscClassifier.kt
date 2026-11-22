@@ -82,7 +82,7 @@ class DiscClassifier(engine: VlcEngine) {
                 ?.replace('\n', '|')} spu=${media.getMetaExtra(TrackLists.SPU_META)?.replace('\n', '|')}" +
                 " id=${media.getMetaExtra(DISC_ID_META)} length=${media.duration}" +
                 " dvda=${media.getMetaExtra(DVDA_TRACKS_META)?.replace('\n', '|')}" +
-                " aacs=${media.getMetaExtra(AACS_META)}" +
+                " aacs=${media.getMetaExtra(AACS_META)} bdj=${media.getMetaExtra(BDJ_META)}" +
                 " decoys=${media.getMetaExtra(DECOYS_META)} region=${media.getMetaExtra(REGION_META)}" +
                 " versions=${media.getMetaExtra(TrackLists.VERSIONS_META)?.replace('\n', '|')}" +
                 " episodes=${media.getMetaExtra(TrackLists.EPISODES_META)?.replace('\n', '|')}")
@@ -114,6 +114,7 @@ class DiscClassifier(engine: VlcEngine) {
                 "0" -> false
                 else -> null
             },
+            bdj = medias.any { it.getMetaExtra(BDJ_META) == "1" },
             decoys = medias.any { it.getMetaExtra(DECOYS_META) == "1" },
             region = RegionMismatch.parse(medias.firstNotNullOfOrNull { it.getMetaExtra(REGION_META) }),
         ))
@@ -137,6 +138,9 @@ class DiscClassifier(engine: VlcEngine) {
         /* Set by laser.c on a Blu-ray row: "1" if AACS-protected, "0" if
          * not. */
         const val AACS_META = "laser-aacs"
+        /* Set by laser.c on a Blu-ray row: "1" if its index has titles
+         * written in Java (BD-J); absent otherwise. */
+        const val BDJ_META = "laser-bdj"
         /* Set by laser.c on a DVD's video rows: "1" if the disc has decoys,
          * "disc,drive" region masks if the drive's region forbids it. */
         const val DECOYS_META = "laser-decoys"
