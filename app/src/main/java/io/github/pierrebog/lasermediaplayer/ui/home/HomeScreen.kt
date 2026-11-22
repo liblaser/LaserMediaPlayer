@@ -385,7 +385,7 @@ private fun DiscPanel(
                 ResumeProgress(state.resume?.timeMs ?: 0, length, byline, metrics.textSize)
             }
             /* Above the ways of playing it: what may get in their way. */
-            DiscWarnings(disc, form)
+            DiscWarnings(disc, state, form)
             val tv = form == FormFactor.TV
             val gap = if (tv) 12.dp else 10.dp
             val playButton: @Composable (Int, PlayAction) -> Unit = { i, action ->
@@ -531,14 +531,18 @@ private fun DiscPanel(
 private val WarningAccent = Color(0xFFF5A524)
 
 /**
- * A DVD's warnings, in one box, a line each, or nothing: a disc with decoys,
- * which the menus avoid for sure where playing without them may not; a disc
- * the drive's region forbids, which still plays, slower to start.
+ * A disc's warnings, in one box, a line each, or nothing: a DVD with decoys,
+ * which the menus avoid for sure where playing without them may not; a DVD
+ * the drive's region forbids, which still plays, slower to start the first
+ * time - until its keys are in the cache; a Blu-ray whose menus, written in
+ * Java, start slower the first time - until their classes are in the cache
+ * converted.
  */
 @Composable
-private fun DiscWarnings(disc: DiscInfo, form: FormFactor) {
-    val region = disc.region
-    if (!disc.decoys && region == null) return
+private fun DiscWarnings(disc: DiscInfo, state: HomeState, form: FormFactor) {
+    val region = disc.region?.takeIf { state.regionKeysCold }
+    val menus = state.menusCold
+    if (!disc.decoys && region == null && !menus) return
     val tv = form == FormFactor.TV
     val shape = RoundedCornerShape(12.dp)
     val textSize = if (tv) 17.sp else 14.sp
@@ -575,6 +579,9 @@ private fun DiscWarnings(disc: DiscInfo, form: FormFactor) {
                  pluralStringResource(R.plurals.warning_region, region.disc.size,
                                       region.disc.size, region.disc.joinToString(", ")),
                  stringResource(R.string.warning_region_detail, region.drive.joinToString(", ")))
+        if (menus)
+            line(R.drawable.ic_hourglass, stringResource(R.string.warning_menus),
+                 stringResource(R.string.warning_menus_detail))
     }
 }
 

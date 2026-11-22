@@ -6,6 +6,10 @@ import io.github.pierrebog.lasermediaplayer.LASER_TAG
 import io.github.pierrebog.lasermediaplayer.disc.DiscInfo
 import io.github.pierrebog.lasermediaplayer.resume.CacheRecord
 import io.github.pierrebog.lasermediaplayer.resume.ResumeStore
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import java.io.File
 
 /**
@@ -59,6 +63,14 @@ class PlaybackCaches(context: Context, private val store: ResumeStore) {
         store.saveCacheRecord(disc, cache.id, CacheRecord(stamp, earlier + added))
         if (added.isNotEmpty())
             Log.d(LASER_TAG, "${disc.key}: ${added.size} file(s) added to the $cache cache")
+        _changes.update { it + 1 }
+    }
+
+    companion object {
+        private val _changes = MutableStateFlow(0)
+        /** Bumped once a playback's files are recorded: what [cold] says
+         * may have changed - the disc screen's warnings. */
+        val changes: StateFlow<Int> = _changes.asStateFlow()
     }
 
     private fun dirOf(cache: Cache): File = when (cache) {

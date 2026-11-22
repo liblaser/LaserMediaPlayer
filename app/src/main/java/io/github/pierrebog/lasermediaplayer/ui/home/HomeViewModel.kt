@@ -20,6 +20,7 @@ import io.github.pierrebog.lasermediaplayer.settings.LookupSettings
 import io.github.pierrebog.lasermediaplayer.settings.PlaybackDefaults
 import io.github.pierrebog.lasermediaplayer.settings.defaultTracks
 import io.github.pierrebog.lasermediaplayer.vlc.BdjRuntime
+import io.github.pierrebog.lasermediaplayer.vlc.PlaybackCaches
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -61,9 +62,18 @@ data class HomeState(
     val lookups: LookupSettings = LookupSettings(),
     /** libbluray's BD-J jars are copied: Blu-ray menus can be offered. */
     val blurayMenus: Boolean = false,
+    /** A DVD the drive's region forbids, whose keys are not in the cache:
+     * its first playback cracks them, and starts slower. */
+    val regionKeysCold: Boolean = false,
+    /** A Blu-ray's menus written in Java, whose classes are not in the
+     * cache converted: their first playback converts them, and starts
+     * slower. */
+    val menusCold: Boolean = false,
 )
 
 class HomeViewModel(private val app: LaserApp) : ViewModel() {
+
+    private val caches = PlaybackCaches(app, app.resume)
 
     private val selectedName = MutableStateFlow<String?>(null)
     /* Bumped when something stored about the disc changes. */
@@ -71,7 +81,9 @@ class HomeViewModel(private val app: LaserApp) : ViewModel() {
 
     val state: StateFlow<HomeState> = combine(
         app.drives.drives, app.drives.probing, selectedName, stored,
-        combine(app.settings.playback, app.settings.lookups, BdjRuntime.ready, ::Triple),
+        /* A playback's caches recorded: the warnings may go. */
+        combine(app.settings.playback, app.settings.lookups, BdjRuntime.ready,
+                PlaybackCaches.changes) { defaults, lookups, ready, _ -> Triple(defaults, lookups, ready) },
     ) { drives, probing, name, _, (defaults, lookups, blurayMenus) ->
         /* The chosen drive while it is there, else the first with a disc. */
         val selected = drives.firstOrNull { it.deviceName == name }
@@ -100,6 +112,11 @@ class HomeViewModel(private val app: LaserApp) : ViewModel() {
             episode = episode,
             lookups = lookups,
             blurayMenus = blurayMenus,
+            /* Folder listings, a few milliseconds (PlaybackCaches). */
+            regionKeysCold = disc?.takeIf { it.region != null }
+                ?.let { caches.cold(it, PlaybackCaches.Cache.DVDCSS) } ?: false,
+            menusCold = disc?.takeIf { it.kind == DiscKind.BLURAY && it.bdj && blurayMenus }
+                ?.let { caches.cold(it, PlaybackCaches.Cache.DEX) } ?: false,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, HomeState())
 

@@ -40,8 +40,9 @@
     <!-- The heading over the tracks and the buttons playing without the menus. -->
     <string name="without_menus_heading">Sin los menús del disco</string>
     <string name="with_menus_heading">Con los menús del disco</string>
-    <!-- The warnings over a DVD's tracks: a disc with decoys, and a disc the
-         drive's region forbids - its regions (count, then the list), the drive's. -->
+    <!-- The warnings over a disc's tracks: a DVD with decoys; a DVD the drive's
+         region forbids - its regions (count, then the list), the drive's - until
+         its keys are cached; a Blu-ray's menus in Java, until converted. -->
     <string name="warning_decoys">Disco protegido</string>
     <string name="warning_decoys_detail">se recomienda reproducir con los menús</string>
     <plurals name="warning_region">
@@ -49,7 +50,9 @@
         <item quantity="many">Disco de regiones %2$s</item>
         <item quantity="other">Disco de regiones %2$s</item>
     </plurals>
-    <string name="warning_region_detail">unidad en la región %1$s, el inicio será más lento</string>
+    <string name="warning_region_detail">unidad en la región %1$s, el primer inicio será más lento</string>
+    <string name="warning_menus">Primera reproducción con los menús</string>
+    <string name="warning_menus_detail">el inicio será más lento</string>
     <string name="video_part_heading">Parte de vídeo</string>
     <string name="play_audio_part">Reproducir la parte de audio</string>
     <string name="play_video_part">Reproducir la parte de vídeo</string>
