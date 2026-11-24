@@ -235,10 +235,19 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
         /* The disc menus, and the audio by default, in LMP's language - the
          * one chosen in its options, which may not be the system's that
          * VlcEngine gave libVLC at start: the player's language, as on a DVD
-         * player, not the disc's choice of tracks, which the menus make. */
+         * player, not the disc's choice of tracks, which the menus make.
+         *
+         * Not the audio of a Blu-ray played with its menus: libVLC's track
+         * selection switches to a track of the preferred language as soon as
+         * it appears, over the one bluray.c selects for the disc - the film's
+         * audio picked in the menus was dropped for LMP's language. Empty
+         * rather than absent, which would inherit VlcEngine's --audio-language.
+         * The disc then hears of no preferred audio language - libbluray's
+         * default, English - and its own menus choose. */
         interfaceLocale().language.takeIf { it.isNotEmpty() }?.let { lang ->
             media.addOption(":menu-language=$lang")
-            media.addOption(":audio-language=$lang")
+            media.addOption(if (hasDiscMenu && kind == DiscKind.BLURAY) ":audio-language="
+                            else ":audio-language=$lang")
         }
         /* Hardware decoding, per video codec, from the options: MediaCodec
          * first - not forced, the software decoder after it - and the codecs

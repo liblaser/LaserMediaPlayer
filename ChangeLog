@@ -1,4 +1,4 @@
-2026-XX-XX: Version 0.2.0
+2026-11-24: Version 0.2.0
     - Show warnings for DVD region-mismatch or protection
     - Show what movie playback is waiting for before its first picture
     - Run BD-J menus in the app's ART, without a bundled JRE (app size halved)
@@ -7,6 +7,7 @@
     - Show a clock on the video playback screen
     - Added the possibility to select a TV show episode from the main screen
     - Update liblaser to version 0.3.2
+    - Fix track selection in Blu-ray menu being ignored when playback starts
 
 2026-11-05: Version 0.1.0
     - Initial release
