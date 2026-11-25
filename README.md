@@ -42,16 +42,6 @@ the disc screen shows its title and controls to play it.
 Neither is provided by this project. Please check your local laws before
 installing libaacs.
 
-### Options
-
-- *Interface:* the app's language and theme.
-- *Playback:* the default audio and subtitle languages, hardware decoding
-  for each kind of disc, the arrows in disc menus, and the AACS key file
-  if libaacs is detected.
-- *Covers and posters:* the online lookups. Film posters need a free TMDB
-  API key, from an account on themoviedb.org.
-- *About:* the version, the licence, and the libraries the app is made of.
-
 ### Troubleshooting
 
 **If nothing happens when you plug the drive in** - no permission dialog, no
@@ -68,14 +58,15 @@ hardware decoding for that kind of disc, in *Options › Playback*. Some
 devices' decoders handle the video of a Video CD, a DVD or a Blu-ray badly;
 the app then decodes it itself, at the cost of more battery and CPU.
 
-**"Disc not identified"** means the drive did not answer in time. Take the
-disc out and put it back, or unplug the drive and plug it in again.
+**"Disc not identified"** means the drive did not answer in time. Retry, take
+the disc out and put it back, or unplug the drive and plug it in again.
 
 **"This Blu-ray could not be decrypted"** means the key file has no key for
 that disc: load a newer `KEYDB.cfg` in *Options › Playback*.
 
-**To report a problem,** include the log: the tags are `Laser` for the
-drive, `LaserPlayer` for the app and `VLC` for libVLC.
+**To report a problem,** please include the log, ideally after replicating
+the issue with the debug pak. I recommend Logcat Extreme for log collection:
+https://play.google.com/store/apps/details?id=scd.lcex
 
 ## Building
 
@@ -144,9 +135,7 @@ app/src/main/java/io/github/pierrebog/lasermediaplayer/
 
 GPL version 2 or later: see `COPYING`. The APK also carries libVLC and the
 libraries linked into it, and AndroidX and Kotlin's (Apache 2.0); Options ›
-About lists them with their licences (`ui/options/Credits.kt`, kept by hand
-in step with the libVLC build).
+About lists them with their licences.
 
-For the Blu-ray menus, the APK carries libbluray's BD-J jars (LGPLv2.1 or
-later) and its dexer, AOSP's dx 1.16 (Apache 2.0), as kept for libbluray at
-https://github.com/liblaser/bdj-dx.
+For the Blu-ray menus, the APK carries a dexer, AOSP's dx 1.16 (Apache 2.0),
+as kept for libbluray atnhttps://github.com/liblaser/bdj-dx.
