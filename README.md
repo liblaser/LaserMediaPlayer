@@ -65,7 +65,7 @@ the disc out and put it back, or unplug the drive and plug it in again.
 that disc: load a newer `KEYDB.cfg` in *Options › Playback*.
 
 **To report a problem,** please include the log, ideally after replicating
-the issue with the debug pak. I recommend Logcat Extreme for log collection:
+the issue with the debug APK. I recommend Logcat Extreme for log collection:
 https://play.google.com/store/apps/details?id=scd.lcex
 
 ## Building
