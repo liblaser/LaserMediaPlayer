@@ -2,6 +2,7 @@
 <resources>
     <string name="settings">Réglages</string>
     <string name="refresh">Actualiser</string>
+    <string name="update_available">Version %1$s disponible</string>
     <string name="back">Retour</string>
 
     <string name="state_identifying">Identification du disque…</string>
@@ -137,6 +138,7 @@
     <string name="options_language">Langue de l\'interface</string>
     <string name="options_language_short">Langue</string>
     <string name="options_theme">Thème</string>
+    <string name="options_check_updates">Vérifier si une nouvelle version est disponible</string>
     <string name="theme_dark">Sombre</string>
     <string name="theme_light">Clair</string>
     <string name="theme_system">Selon le système</string>

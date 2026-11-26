@@ -1,7 +1,7 @@
 # Laser Media Player
 
 Plays audio CDs, Video CDs, DVD-Video, DVD-Audio and Blu-ray discs from a USB
-optical drive, on Android (6.0 or later) phones, boxes and Android TV, through
+optical drive, on unrooted Android (6.0 or later) phones, boxes and Android TV, through
 libVLC 4 and liblaser.
 
 > **Legal notice:** Laser Media Player is meant to play physical discs **you own**. 

@@ -301,10 +301,12 @@ private fun TabButton(
     }
 }
 
-/** Language and theme, under one INTERFACE title. */
+/** Language, theme, and whether to look for a newer version of the app,
+ * under one INTERFACE title. */
 @Composable
 private fun InterfacePage(settings: AppSettings, metrics: OptionsMetrics, open: (Picker) -> Unit) {
     val theme by settings.theme.collectAsStateWithLifecycle()
+    val checkUpdates by settings.checkUpdates.collectAsStateWithLifecycle()
     val language = languageLabel(settings.language)
     val themeValue = themeLabel(theme)
     Section(stringResource(R.string.options_interface), metrics) {
@@ -313,6 +315,8 @@ private fun InterfacePage(settings: AppSettings, metrics: OptionsMetrics, open: 
                 open(Picker.LANGUAGE) } },
             { ValueRow(stringResource(R.string.options_theme), themeValue, metrics) {
                 open(Picker.THEME) } },
+            { SwitchRow(stringResource(R.string.options_check_updates), checkUpdates, metrics,
+                        onChange = settings::setCheckUpdates) },
         )
     }
 }

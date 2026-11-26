@@ -3,6 +3,7 @@
 
     <string name="settings">Instellingen</string>
     <string name="refresh">Vernieuwen</string>
+    <string name="update_available">Versie %1$s beschikbaar</string>
     <string name="back">Terug</string>
 
     <!-- States without a disc -->
@@ -141,6 +142,7 @@
     <string name="options_language">Taal van de interface</string>
     <string name="options_language_short">Taal</string>
     <string name="options_theme">Thema</string>
+    <string name="options_check_updates">Controleren op een nieuwe versie</string>
     <string name="theme_dark">Donker</string>
     <string name="theme_light">Licht</string>
     <string name="theme_system">Systeemstandaard</string>

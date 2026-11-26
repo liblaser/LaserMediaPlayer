@@ -19,13 +19,19 @@ import io.github.pierrebog.lasermediaplayer.resume.TrackChoice
 import io.github.pierrebog.lasermediaplayer.settings.LookupSettings
 import io.github.pierrebog.lasermediaplayer.settings.PlaybackDefaults
 import io.github.pierrebog.lasermediaplayer.settings.defaultTracks
+import io.github.pierrebog.lasermediaplayer.update.AppUpdate
+import io.github.pierrebog.lasermediaplayer.update.UpdateCheck
 import io.github.pierrebog.lasermediaplayer.vlc.BdjRuntime
 import io.github.pierrebog.lasermediaplayer.vlc.PlaybackCaches
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.days
 
 /** What the player is asked to do. */
 data class PlaybackRequest(
@@ -69,6 +75,16 @@ data class HomeState(
      * cache converted: their first playback converts them, and starts
      * slower. */
     val menusCold: Boolean = false,
+    /** A newer version of the app, when the options let it be looked for. */
+    val update: AppUpdate? = null,
+)
+
+/* What the home screen shows besides the drives. */
+private data class HomeExtras(
+    val defaults: PlaybackDefaults,
+    val lookups: LookupSettings,
+    val blurayMenus: Boolean,
+    val update: AppUpdate?,
 )
 
 class HomeViewModel(private val app: LaserApp) : ViewModel() {
@@ -78,13 +94,31 @@ class HomeViewModel(private val app: LaserApp) : ViewModel() {
     private val selectedName = MutableStateFlow<String?>(null)
     /* Bumped when something stored about the disc changes. */
     private val stored = MutableStateFlow(0)
+    /* A newer version of the app, if one was found. */
+    private val update = MutableStateFlow<AppUpdate?>(null)
+
+    init {
+        /* Looked for while the option is on: at once, then once a day - a TV
+         * box may keep the app open for weeks. */
+        viewModelScope.launch {
+            app.settings.checkUpdates.collectLatest { on ->
+                update.value = null
+                while (on) {
+                    UpdateCheck.newer()?.let { update.value = it }
+                    delay(1.days)
+                }
+            }
+        }
+    }
 
     val state: StateFlow<HomeState> = combine(
         app.drives.drives, app.drives.probing, selectedName, stored,
         /* A playback's caches recorded: the warnings may go. */
         combine(app.settings.playback, app.settings.lookups, BdjRuntime.ready,
-                PlaybackCaches.changes) { defaults, lookups, ready, _ -> Triple(defaults, lookups, ready) },
-    ) { drives, probing, name, _, (defaults, lookups, blurayMenus) ->
+                PlaybackCaches.changes, update) { defaults, lookups, ready, _, newer ->
+            HomeExtras(defaults, lookups, ready, newer)
+        },
+    ) { drives, probing, name, _, (defaults, lookups, blurayMenus, newer) ->
         /* The chosen drive while it is there, else the first with a disc. */
         val selected = drives.firstOrNull { it.deviceName == name }
             ?: drives.firstOrNull { it.status is DriveStatus.Ready }
@@ -117,6 +151,7 @@ class HomeViewModel(private val app: LaserApp) : ViewModel() {
                 ?.let { caches.cold(it, PlaybackCaches.Cache.DVDCSS) } ?: false,
             menusCold = disc?.takeIf { it.kind == DiscKind.BLURAY && it.bdj && blurayMenus }
                 ?.let { caches.cold(it, PlaybackCaches.Cache.DEX) } ?: false,
+            update = newer,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, HomeState())
 

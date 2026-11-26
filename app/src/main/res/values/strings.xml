@@ -4,6 +4,7 @@
 
     <string name="settings">Settings</string>
     <string name="refresh">Refresh</string>
+    <string name="update_available">Version %1$s available</string>
     <string name="back">Back</string>
 
     <!-- States without a disc -->
@@ -144,6 +145,7 @@
     <string name="options_language">Interface language</string>
     <string name="options_language_short">Language</string>
     <string name="options_theme">Theme</string>
+    <string name="options_check_updates">Check for a new version</string>
     <string name="theme_dark">Dark</string>
     <string name="theme_light">Light</string>
     <string name="theme_system">System default</string>

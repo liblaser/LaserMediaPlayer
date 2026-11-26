@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
@@ -41,10 +42,14 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -72,6 +77,7 @@ import io.github.pierrebog.lasermediaplayer.ui.theme.FocusColors
 import io.github.pierrebog.lasermediaplayer.ui.theme.keyNavigation
 import io.github.pierrebog.lasermediaplayer.ui.theme.LaserColors
 import io.github.pierrebog.lasermediaplayer.ui.theme.LaserType
+import io.github.pierrebog.lasermediaplayer.update.AppUpdate
 
 private enum class Sheet { AUDIO, SUBTITLES, VERSION, EPISODE }
 
@@ -146,7 +152,7 @@ fun HomeScreen(vm: HomeViewModel, onPlay: (PlaybackRequest) -> Unit, onOptions: 
                 ),
             verticalArrangement = Arrangement.spacedBy(if (tv) 28.dp else 18.dp),
         ) {
-            Header(state.selected, form, onRefresh = { vm.refresh(explicit = true) }, onOptions)
+            Header(state.selected, state.update, form, onRefresh = { vm.refresh(explicit = true) }, onOptions)
             if (state.drives.size > 1)
                 DriveChips(state.drives, state.selected, onSelect = vm::select)
 
@@ -246,7 +252,8 @@ fun HomeScreen(vm: HomeViewModel, onPlay: (PlaybackRequest) -> Unit, onOptions: 
 }
 
 @Composable
-private fun Header(selected: Drive?, form: FormFactor, onRefresh: () -> Unit, onOptions: () -> Unit) {
+private fun Header(selected: Drive?, update: AppUpdate?, form: FormFactor, onRefresh: () -> Unit,
+                   onOptions: () -> Unit) {
     val tv = form == FormFactor.TV
     val buttonSize = if (tv) 56.dp else 44.dp
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -259,6 +266,8 @@ private fun Header(selected: Drive?, form: FormFactor, onRefresh: () -> Unit, on
                 if (tv && selected != null)
                     Text(selected.label, style = LaserType.Small, fontSize = 18.sp)
             }
+            if (update != null) UpdateButton(update, buttonSize, tv,
+                                             full = form != FormFactor.PORTRAIT)
             CircleIconButton(R.drawable.ic_refresh, stringResource(R.string.refresh),
                              buttonSize, onRefresh)
             CircleIconButton(R.drawable.ic_settings, stringResource(R.string.settings),
@@ -266,6 +275,42 @@ private fun Header(selected: Drive?, form: FormFactor, onRefresh: () -> Unit, on
         }
         if (!tv && selected != null)
             Text(selected.label, style = LaserType.Small)
+    }
+}
+
+/**
+ * A newer version of the app is out: a button before the header's others,
+ * opening its release page. "Version 1.3 disponible" if [full]; its number
+ * alone otherwise - a phone in portrait, whose header has little room beside
+ * the app's name. Nothing happens on a device without a browser, as some TV
+ * boxes are.
+ */
+@Composable
+private fun UpdateButton(update: AppUpdate, height: Dp, tv: Boolean, full: Boolean) {
+    val uriHandler = LocalUriHandler.current
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val shape = RoundedCornerShape(height / 2)
+    val text = stringResource(R.string.update_available, update.version)
+    Row(
+        Modifier
+            .height(height)
+            .clip(shape)
+            .background(if (focused) LaserColors.Text else LaserColors.Accent.copy(alpha = 0.12f))
+            .border(1.dp, if (focused) Color.Transparent else LaserColors.Accent.copy(alpha = 0.6f), shape)
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button) {
+                runCatching { uriHandler.openUri(update.url) }
+            }
+            .semantics { contentDescription = text }
+            .padding(start = if (tv) 18.dp else 12.dp, end = if (tv) 22.dp else 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(if (tv) 10.dp else 6.dp),
+    ) {
+        val color = if (focused) LaserColors.Background else LaserColors.Accent
+        Icon(painterResource(R.drawable.ic_download), contentDescription = null, tint = color,
+             modifier = Modifier.size(if (tv) 22.dp else 20.dp))
+        Text(if (full) text else update.version, color = color, fontFamily = BodyFamily,
+             fontSize = if (tv) 18.sp else 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
 

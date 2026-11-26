@@ -3,6 +3,7 @@
 
     <string name="settings">Configurações</string>
     <string name="refresh">Atualizar</string>
+    <string name="update_available">Versão %1$s disponível</string>
     <string name="back">Voltar</string>
 
     <!-- States without a disc -->
@@ -143,6 +144,7 @@
     <string name="options_language">Idioma da interface</string>
     <string name="options_language_short">Idioma</string>
     <string name="options_theme">Tema</string>
+    <string name="options_check_updates">Verificar se há uma nova versão</string>
     <string name="theme_dark">Escuro</string>
     <string name="theme_light">Claro</string>
     <string name="theme_system">Padrão do sistema</string>

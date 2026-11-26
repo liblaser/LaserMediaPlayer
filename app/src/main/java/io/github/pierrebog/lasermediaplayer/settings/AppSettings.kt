@@ -134,6 +134,16 @@ class AppSettings(context: Context) {
         _theme.value = mode
     }
 
+    /** Whether the home screen asks GitHub for a newer version of the app
+     * (UpdateCheck). */
+    private val _checkUpdates = MutableStateFlow(prefs.getBoolean(KEY_CHECK_UPDATES, true))
+    val checkUpdates: StateFlow<Boolean> = _checkUpdates.asStateFlow()
+
+    fun setCheckUpdates(on: Boolean) {
+        prefs.edit { putBoolean(KEY_CHECK_UPDATES, on) }
+        _checkUpdates.value = on
+    }
+
     private val _playback = MutableStateFlow(loadPlayback())
     val playback: StateFlow<PlaybackDefaults> = _playback.asStateFlow()
 
@@ -235,6 +245,7 @@ class AppSettings(context: Context) {
 
     private companion object {
         const val KEY_THEME = "theme"
+        const val KEY_CHECK_UPDATES = "check_updates"
         const val KEY_AUDIO = "audio"
         const val KEY_SUBTITLES = "subtitles"
         const val KEY_NO_SUBS = "no_subs_in_interface_language"

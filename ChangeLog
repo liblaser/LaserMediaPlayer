@@ -1,5 +1,6 @@
 XXXX-XX-XX: Version 0.2.1
     - Fix CD-DA fallback to disc CD-Text when no MusicBrainz match is found
+    - Show a notification when a new release is available on Github
 
 2026-11-24: Version 0.2.0
     - Show warnings for DVD region-mismatch or protection
