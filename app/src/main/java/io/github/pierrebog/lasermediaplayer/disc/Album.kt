@@ -28,8 +28,9 @@ data class AlbumInfo(
 /**
  * Identifies a CD by its table of contents: the length of each track, as
  * the cdda module computes it from the sectors. Not MusicBrainz's disc ID,
- * which the app cannot compute without the sector offsets, but stable for a
- * given pressing.
+ * which a VLC without the cdda module's table of contents (see
+ * [MusicBrainz.TOC_META]) does not give, but stable for a given pressing -
+ * and the key of the albums kept since the first versions.
  */
 fun tocId(lengthsMs: List<Long>): String = shortHash(lengthsMs.joinToString(","))
 

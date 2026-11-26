@@ -167,6 +167,9 @@ data class DiscInfo(
     val subtitleTracks: List<SubtitleTrackInfo>,
     /** An audio CD's track lengths, from its table of contents. */
     val cdTracks: List<Long> = emptyList(),
+    /** An audio CD's table of contents as MusicBrainz takes it, from the
+     * cdda module: see [MusicBrainz.TOC_META]. Null if it gave none. */
+    val cdToc: String? = null,
     /** A DVD-Audio's track lengths, those of its Audio zone's first title,
      * from laser.c. */
     val dvdaTracks: List<Long> = emptyList(),

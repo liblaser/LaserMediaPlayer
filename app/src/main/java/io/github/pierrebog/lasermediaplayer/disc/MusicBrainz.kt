@@ -29,17 +29,21 @@ import kotlin.time.Duration.Companion.seconds
 data class MusicBrainzMatch(val album: AlbumInfo, val coverUrls: List<String>)
 
 /**
- * Looks an audio CD up on MusicBrainz from its track lengths - a DVD-Audio
- * from its label, see [searchDvdAudio].
+ * Looks an audio CD up on MusicBrainz from its table of contents - a
+ * DVD-Audio from its label, see [searchDvdAudio].
  *
- * The table of contents is rebuilt from the lengths the cdda module gives:
- * a length is a whole number of sectors, so the sector counts come back
- * exactly, and the tracks are assumed to follow each other from the start
- * of the disc, as on a plain audio CD. One request asks for the disc ID and
- * passes the table of contents too: MusicBrainz answers the releases
- * carrying that exact disc, else those whose track lengths are close. VLC's
- * cdda asks for the disc ID alone, and finds nothing when that pressing's
- * ID was never submitted.
+ * The table of contents is the cdda module's ([TOC_META]): where each track
+ * starts, as the disc says, so the disc ID is the one MusicBrainz knows -
+ * VLC's own lookup computes it the same way. Without it - a VLC that does
+ * not give it - it is rebuilt from the track lengths: a length is a whole
+ * number of sectors, so the sector counts come back exactly, but the tracks
+ * are assumed to start right after the disc's two-second lead-in, which a
+ * disc with a longer pregap before its first track does not follow: its
+ * disc ID is then wrong. One request asks for the disc ID and passes the
+ * table of contents too: MusicBrainz answers the releases carrying that
+ * exact disc, else those whose track lengths are close. VLC's cdda asks for
+ * the disc ID alone, and finds nothing when that pressing's ID was never
+ * submitted.
  *
  * On a release of several discs, the medium holding this disc is the one
  * used - the one carrying its ID, else one with as many tracks, of lengths
@@ -48,6 +52,12 @@ data class MusicBrainzMatch(val album: AlbumInfo, val coverUrls: List<String>)
  * than "Discovery", Pink Floyd's box of their studio albums.
  */
 object MusicBrainz {
+
+    /** The meta extra the cdda module sets on each track: the disc's table
+     * of contents as MusicBrainz takes it - the first and last audio tracks,
+     * the lead-out, then where each audio track starts, in sectors, joined by
+     * '+'. */
+    const val TOC_META = "MUSICBRAINZ_TOC"
 
     private const val SERVER = "https://musicbrainz.org/ws/2"
     private const val COVERS = "https://coverartarchive.org"
@@ -63,15 +73,19 @@ object MusicBrainz {
     /* MusicBrainz asks clients to identify themselves, with a contact. */
     private const val USER_AGENT = "LaserMediaPlayer/${BuildConfig.VERSION_NAME} ( ${Credits.SOURCE} )"
 
-    suspend fun lookUp(lengthsMs: List<Long>): MusicBrainzMatch? = withContext(Dispatchers.IO) {
+    /**
+     * The CD of [lengthsMs], its table of contents [toc] as the cdda module
+     * gives it ([TOC_META]), if it does: used when it agrees with the
+     * lengths, else rebuilt from them.
+     */
+    suspend fun lookUp(lengthsMs: List<Long>, toc: String?): MusicBrainzMatch? = withContext(Dispatchers.IO) {
         if (lengthsMs.isEmpty()) return@withContext null
-        val sectors = lengthsMs.map { (it * 75.0 / 1000).roundToLong() }
-        val offsets = sectors.runningFold(150L) { at, length -> at + length }
-        val leadOut = offsets.last()
-        val starts = offsets.dropLast(1)
-        val discId = discId(starts.size, leadOut, starts)
-        val toc = (listOf(1L, starts.size.toLong(), leadOut) + starts).joinToString("+")
-        val url = "$SERVER/discid/$discId?toc=$toc&fmt=json&cdstubs=no" +
+        val given = toc?.let { Toc.parse(it, lengthsMs.size) }
+        if (toc != null && given == null)
+            Log.w(LASER_TAG, "MusicBrainz: table of contents \"$toc\" unusable, rebuilt from the lengths")
+        val contents = given ?: Toc.of(lengthsMs)
+        val discId = discId(contents)
+        val url = "$SERVER/discid/$discId?toc=$contents&fmt=json&cdstubs=no" +
                   "&inc=artist-credits+recordings+release-groups"
         try {
             val json = get(url) ?: return@withContext null
@@ -90,17 +104,57 @@ object MusicBrainz {
     }
 
     /**
-     * The MusicBrainz disc ID, as libdiscid computes it: SHA-1 of the first
-     * and last track numbers - the first always 1 here - and the 100 offsets
-     * (lead-out first), in upper-case hexadecimal, in base 64 with "._-" for
-     * "+/=".
+     * A CD's table of contents as MusicBrainz takes it: the first and last
+     * track numbers, the lead-out, and where each track starts, in sectors
+     * counted from the start of the lead-in - 150 for a first track right
+     * after it.
      */
-    private fun discId(last: Int, leadOut: Long, starts: List<Long>): String {
+    private class Toc(val first: Int, val last: Int, val leadOut: Long, val starts: List<Long>) {
+
+        /** As the "toc" parameter of a request writes it. */
+        override fun toString(): String =
+            (listOf(first.toLong(), last.toLong(), leadOut) + starts).joinToString("+")
+
+        companion object {
+            /** [text], the cdda module's; null if malformed or not of
+             * [count] tracks - those whose lengths are known. */
+            fun parse(text: String, count: Int): Toc? {
+                val values = text.split('+').map { it.trim().toLongOrNull() ?: return null }
+                if (values.size < 4) return null
+                val first = values[0].toInt()
+                val last = values[1].toInt()
+                val leadOut = values[2]
+                val starts = values.drop(3)
+                if (first !in 1..99 || last != first + starts.size - 1 || last > 99 ||
+                    starts.size != count) return null
+                /* Each track after the one before, the lead-out after them. */
+                if ((starts + leadOut).zipWithNext().any { (a, b) -> b <= a } || starts[0] < 0)
+                    return null
+                return Toc(first, last, leadOut, starts)
+            }
+
+            /** Rebuilt from the tracks' lengths: one after the other, from
+             * just after the lead-in. */
+            fun of(lengthsMs: List<Long>): Toc {
+                val sectors = lengthsMs.map { (it * 75.0 / 1000).roundToLong() }
+                val offsets = sectors.runningFold(150L) { at, length -> at + length }
+                return Toc(1, lengthsMs.size, offsets.last(), offsets.dropLast(1))
+            }
+        }
+    }
+
+    /**
+     * The MusicBrainz disc ID, as libdiscid computes it: SHA-1 of the first
+     * and last track numbers and the 100 offsets - the lead-out's, then each
+     * track's by its number, 0 for a number the disc has not - in upper-case
+     * hexadecimal, in base 64 with "._-" for "+/=".
+     */
+    private fun discId(toc: Toc): String {
         val text = StringBuilder()
-            .append("01")
-            .append("%02X".format(last))
-            .append("%08X".format(leadOut))
-        for (i in 0 until 99) text.append("%08X".format(starts.getOrElse(i) { 0L }))
+            .append("%02X".format(toc.first))
+            .append("%02X".format(toc.last))
+            .append("%08X".format(toc.leadOut))
+        for (track in 1..99) text.append("%08X".format(toc.starts.getOrElse(track - toc.first) { 0L }))
         val sha = MessageDigest.getInstance("SHA-1").digest(text.toString().toByteArray())
         return Base64.encodeToString(sha, Base64.NO_WRAP)
             .replace('+', '.').replace('/', '_').replace('=', '-')

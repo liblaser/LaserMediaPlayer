@@ -7,7 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val appVersion = "0.2.0"
+val appVersion = "0.2.1"
 
 /* The release key, from keystore.properties at the project's root - not in
  * git: storeFile, storePassword, keyAlias, keyPassword. Without it, a

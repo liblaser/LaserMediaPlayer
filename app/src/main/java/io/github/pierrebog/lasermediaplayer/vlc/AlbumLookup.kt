@@ -28,7 +28,7 @@ import org.videolan.libvlc.interfaces.IMedia
  * The tracks are listed during classification, while the drive's
  * connection is open: the cdda module reads the table of contents through
  * it. MusicBrainz is asked after the disc is shown ([online]), as TMDB is
- * for a film: no drive needed, the lengths are enough.
+ * for a film: no drive needed, the table of contents kept is enough.
  *
  * MusicBrainz is asked only when the lookup is on; what is kept is used
  * either way. The cdda module never goes on the network itself.
@@ -47,6 +47,7 @@ class AlbumLookup(
     /** One track as the cdda module lists it. */
     private data class Entry(
         val durationMs: Long,
+        val toc: String?,
         val title: String?,
         val artist: String?,
         val album: String?,
@@ -76,7 +77,8 @@ class AlbumLookup(
         if (entries.isNullOrEmpty()) return disc
         val lengths = entries.map { it.durationMs }
         val id = tocId(lengths)
-        val withToc = disc.copy(cdTracks = lengths)
+        val withToc = disc.copy(cdTracks = lengths,
+                                cdToc = entries.firstNotNullOfOrNull { it.toc })
 
         store.load(id)?.let {
             Log.d(LASER_TAG, "album $id: known, \"${it.title}\"")
@@ -113,7 +115,7 @@ class AlbumLookup(
         /* Not kept when nothing is found: asked again next time, the network
          * may be back, or the disc submitted. */
         val match = try {
-            if (query == null) MusicBrainz.lookUp(disc.cdTracks)
+            if (query == null) MusicBrainz.lookUp(disc.cdTracks, disc.cdToc)
             else MusicBrainz.searchDvdAudio(query, disc.dvdaTracks)
         } catch (e: CancellationException) {
             throw e
@@ -206,6 +208,7 @@ class AlbumLookup(
         fun meta(m: Int) = media.getMeta(m)?.trim()?.takeIf { it.isNotEmpty() }
         return Entry(
             durationMs = media.duration.coerceAtLeast(0),
+            toc = media.getMetaExtra(MusicBrainz.TOC_META)?.trim()?.takeIf { it.isNotEmpty() },
             title = meta(IMedia.Meta.Title),
             artist = meta(IMedia.Meta.Artist),
             album = meta(IMedia.Meta.Album),

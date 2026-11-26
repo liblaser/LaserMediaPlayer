@@ -1,3 +1,6 @@
+XXXX-XX-XX: Version 0.2.1
+    - Fix CD-DA fallback to disc CD-Text when no MusicBrainz match is found
+
 2026-11-24: Version 0.2.0
     - Show warnings for DVD region-mismatch or protection
     - Show what movie playback is waiting for before its first picture
