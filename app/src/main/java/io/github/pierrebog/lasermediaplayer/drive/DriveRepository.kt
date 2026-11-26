@@ -9,6 +9,7 @@ import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbManager
 import android.util.Log
 import io.github.pierrebog.lasermediaplayer.LASER_TAG
+import io.github.pierrebog.lasermediaplayer.disc.AlbumInfo
 import io.github.pierrebog.lasermediaplayer.disc.DiscInfo
 import io.github.pierrebog.lasermediaplayer.disc.DiscKind
 import io.github.pierrebog.lasermediaplayer.disc.FilmLookup
@@ -139,8 +140,8 @@ class DriveRepository(
      * seconds to answer it; nothing it reports would be acted on. A drive
      * classified without a disc in is polled, for the disc arriving. */
     private val quiet = HashSet<String>()
-    /** The drive being classified, if any: classifications run one at a
-     * time ([passLock]). */
+    /** The drive being classified, or its CD-Text read ([readCdText]), if
+     * any: they run one at a time ([passLock]). */
     private var classifying: String? = null
     /** Drives whose connection is to be closed - unplugged, or turned down -
      * once no classification nor playback uses it ([closeWhenFree]). */
@@ -619,16 +620,46 @@ class DriveRepository(
     }
 
     /**
-     * Names the audio CD [disc] on MusicBrainz, after it is shown: no drive
-     * needed - its tracks' lengths are enough. The disc is updated if it is
-     * still in the drive.
+     * Names the audio CD [disc], after it is shown: on MusicBrainz - no drive
+     * needed, its tracks' lengths are enough - else by its CD-Text, read from
+     * the drive ([readCdText]). The disc is updated if it is still in the
+     * drive.
      */
     private fun nameCd(disc: DiscInfo) {
         scope.launch {
-            val named = albums.online(disc)
-            /* The lookup is over, whatever it found: the CD-Text stays if
-             * MusicBrainz knows nothing. */
-            updateDisc(disc) { it.copy(album = named?.album ?: it.album, lookupDone = true) }
+            val album = albums.online(disc)?.album ?: readCdText(disc)
+            /* The lookup is over, whatever it found. */
+            updateDisc(disc) { it.copy(album = album ?: it.album, lookupDone = true) }
+        }
+    }
+
+    /**
+     * [disc]'s CD-Text, read from its drive; null if it has none, or if the
+     * drive is taken - playing, unplugged, or holding another disc. Some
+     * drives take seconds to say a disc has none, and answer nothing else
+     * meanwhile: read as a classification is, one drive at a time
+     * ([passLock]), the drive not polled ([quiet]) and its connection kept
+     * until it is done ([classifying]). Never while it plays: playback is
+     * not delayed for it, and the disc goes without.
+     */
+    private suspend fun readCdText(disc: DiscInfo): AlbumInfo? = passLock.withLock {
+        val name = disc.deviceName
+        val shown = (_drives.value.firstOrNull { it.deviceName == name }?.status
+            as? DriveStatus.Ready)?.disc?.key == disc.key
+        val fd = DriveConnections.fd(name)
+        if (!shown || fd == null || name in toClose || DriveConnections.isPlaying(name)) {
+            Log.d(LASER_TAG, "$name: CD-Text not read, the drive is taken")
+            return@withLock null
+        }
+        quiet += name
+        classifying = name
+        try {
+            albums.cdText(disc, fd)
+        } finally {
+            quiet -= name
+            classifying = null
+            /* Unplugged meanwhile: the watch's claim went with it. */
+            if (name in toClose) closeWhenFree(name)
         }
     }
 

@@ -262,6 +262,10 @@ class PlayerController(private val app: LaserApp, private val request: PlaybackR
             }
         }
         speedOption?.let { media.addOption(it) }
+        /* A CD's names are the disc's already (AlbumLookup): its CD-Text,
+         * which some drives take seconds to say a disc has none of, is not
+         * read again. */
+        if (kind == DiscKind.CD_AUDIO) media.addOption(":no-cdda-cdtext")
         player.media = media
         media.release()
         mediaSet = true

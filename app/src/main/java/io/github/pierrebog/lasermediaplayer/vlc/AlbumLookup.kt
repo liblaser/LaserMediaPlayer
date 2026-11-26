@@ -8,6 +8,7 @@ import io.github.pierrebog.lasermediaplayer.disc.AlbumTrack
 import io.github.pierrebog.lasermediaplayer.disc.DiscInfo
 import io.github.pierrebog.lasermediaplayer.disc.DiscKind
 import io.github.pierrebog.lasermediaplayer.disc.FilmLookup
+import io.github.pierrebog.lasermediaplayer.disc.LaserMrl
 import io.github.pierrebog.lasermediaplayer.disc.MusicBrainz
 import io.github.pierrebog.lasermediaplayer.disc.dvdaId
 import io.github.pierrebog.lasermediaplayer.disc.tocId
@@ -20,15 +21,17 @@ import org.videolan.libvlc.interfaces.IMedia
  * Names an audio CD or a DVD-Audio: album, artist, cover, track titles.
  *
  * VLC's cdda module lists the disc's tracks - their lengths, which identify
- * the disc, and the CD-Text if there is any. MusicBrainz is asked by the app
- * (see [MusicBrainz]) rather than through cdda, whose lookup only tries the
- * exact disc ID. The result and the cover are kept, so that a CD seen
- * before needs no network.
+ * the disc, and its CD-Text if asked. MusicBrainz is asked by the app (see
+ * [MusicBrainz]) rather than through cdda, whose lookup only tries the exact
+ * disc ID. The result and the cover are kept, so that a CD seen before needs
+ * no network.
  *
- * The tracks are listed during classification, while the drive's
- * connection is open: the cdda module reads the table of contents through
- * it. MusicBrainz is asked after the disc is shown ([online]), as TMDB is
- * for a film: no drive needed, the table of contents kept is enough.
+ * The tracks are listed during classification, without the CD-Text: some
+ * drives take seconds to say a disc has none. MusicBrainz is asked after the
+ * disc is shown ([online]), as TMDB is for a film: no drive needed, the
+ * table of contents kept is enough. The CD-Text is read only when MusicBrainz
+ * names nothing - the lookup off, or no match - by listing the tracks again,
+ * from the drive ([cdText]).
  *
  * MusicBrainz is asked only when the lookup is on; what is kept is used
  * either way. The cdda module never goes on the network itself.
@@ -55,10 +58,10 @@ class AlbumLookup(
     )
 
     /**
-     * [disc] with its table of contents and what is known of it without the
-     * network: what is kept, else its CD-Text; [disc] itself if the tracks
-     * cannot be listed. Its lookup is done unless MusicBrainz is still to be
-     * asked, with [online]. Never throws.
+     * [disc] with its table of contents and what is kept of it; [disc]
+     * itself if the tracks cannot be listed. Its lookup is done if it is
+     * kept; otherwise MusicBrainz is still to be asked, with [online], and
+     * its CD-Text read, with [cdText]. Never throws.
      */
     suspend fun complete(disc: DiscInfo): DiscInfo {
         val mrl = disc.rows.firstOrNull { it.kind == DiscKind.CD_AUDIO }?.mrl ?: return disc
@@ -73,7 +76,7 @@ class AlbumLookup(
     }
 
     private suspend fun lookUp(disc: DiscInfo, mrl: String): DiscInfo {
-        val entries = browse(mrl)
+        val entries = browse(mrl, cdText = false)
         if (entries.isNullOrEmpty()) return disc
         val lengths = entries.map { it.durationMs }
         val id = tocId(lengths)
@@ -85,10 +88,26 @@ class AlbumLookup(
             return withToc.copy(album = it, lookupDone = true)
         }
 
-        /* The CD-Text meanwhile, and for good if MusicBrainz is not asked
-         * or finds nothing. */
-        return withToc.copy(album = cdText(entries),
-                            lookupDone = !settings.lookups.value.albums)
+        return withToc
+    }
+
+    /**
+     * What [disc]'s CD-Text says, read from its drive - the token [fd] - or
+     * null if it has none or the tracks cannot be listed. As long as the
+     * drive takes to say so: up to cdrom.c's twenty seconds. Never throws.
+     */
+    suspend fun cdText(disc: DiscInfo, fd: Int): AlbumInfo? {
+        val row = disc.rows.firstOrNull { it.kind == DiscKind.CD_AUDIO } ?: return null
+        val mrl = LaserMrl.withFd(row.mrl, fd) ?: return null
+        return try {
+            browse(mrl, cdText = true)?.let { cdText(it) }
+                .also { Log.d(LASER_TAG, "CD-Text of ${disc.deviceName}: \"${it?.title}\"") }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(LASER_TAG, "CD-Text listing failed", e)
+            null
+        }
     }
 
     /**
@@ -187,14 +206,17 @@ class AlbumLookup(
     /**
      * Lists the CD's tracks through the cdda module: parsed, as
      * DiscClassifier does (see [MediaParser]), so that the drive is let go
-     * before this returns. The tracks and their CD-Text only: the cdda
-     * module would otherwise ask MusicBrainz itself.
+     * before this returns. The tracks, and their CD-Text if [cdText]: the
+     * cdda module would otherwise ask MusicBrainz itself.
      *
      * @return the tracks, or null if the listing failed or timed out
      */
-    private suspend fun browse(mrl: String): List<Entry>? {
-        val parsed = parser.parse(mrl, listOf(":no-metadata-network-access"),
-                                  BROWSE_TIMEOUT_MS, SAFETY_TIMEOUT) { items -> items.map(::entryOf) }
+    private suspend fun browse(mrl: String, cdText: Boolean): List<Entry>? {
+        val options = listOf(":no-metadata-network-access") +
+            if (cdText) emptyList() else listOf(":no-cdda-cdtext")
+        val parsed = parser.parse(mrl, options,
+                                  if (cdText) CD_TEXT_TIMEOUT_MS else BROWSE_TIMEOUT_MS,
+                                  SAFETY_TIMEOUT) { items -> items.map(::entryOf) }
         if (parsed is Parsed.Done) return parsed.value
         Log.w(LASER_TAG, "listing $mrl " + when (parsed) {
             Parsed.NeverEnded -> "never ended"
@@ -219,6 +241,10 @@ class AlbumLookup(
     private companion object {
         /* libVLC's, in milliseconds. */
         const val BROWSE_TIMEOUT_MS = 15_000
+        /* Past cdrom.c's time for the CD-Text, twenty seconds, which the
+         * listing waits out: libVLC's interrupt does not cut a command on
+         * the wire short. */
+        const val CD_TEXT_TIMEOUT_MS = 30_000
         /* In case libVLC never ends the parse: past its own timeout, and
          * past liblaser's longest wait, which no interrupt cuts short. */
         val SAFETY_TIMEOUT = 45.seconds
