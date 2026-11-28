@@ -152,7 +152,10 @@ fun HomeScreen(vm: HomeViewModel, onPlay: (PlaybackRequest) -> Unit, onOptions: 
                 ),
             verticalArrangement = Arrangement.spacedBy(if (tv) 28.dp else 18.dp),
         ) {
-            Header(state.selected, state.update, form, onRefresh = { vm.refresh(explicit = true) }, onOptions)
+            /* The drive's name in the header with one drive only: with
+             * several, the chips below name each. */
+            Header(state.selected.takeIf { state.drives.size <= 1 }, state.update, form,
+                   onRefresh = { vm.refresh(explicit = true) }, onOptions)
             if (state.drives.size > 1)
                 DriveChips(state.drives, state.selected, onSelect = vm::select)
 

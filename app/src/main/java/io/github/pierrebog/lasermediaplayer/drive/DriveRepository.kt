@@ -701,6 +701,14 @@ class DriveRepository(
         val POLL_INTERVAL = 1_500.milliseconds
     }
 
-    private fun UsbDevice.label(): String =
-        productName?.trim()?.ifEmpty { null } ?: "USB"
+    /* The drive's name: the USB product name, after the manufacturer's when
+     * it is short - most often a bridge's own, "External", which says
+     * nothing on its own ("JMicron External"). */
+    private fun UsbDevice.label(): String {
+        val product = productName?.trim().orEmpty()
+        if (product.length >= 10) return product
+        val manufacturer = manufacturerName?.trim().orEmpty()
+        return listOf(manufacturer, product).filter { it.isNotEmpty() }
+            .joinToString(" ").ifEmpty { "USB" }
+    }
 }
